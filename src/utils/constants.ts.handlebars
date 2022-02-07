@@ -1,0 +1,33 @@
+import { Address, BigDecimal, BigInt } from '@graphprotocol/graph-ts'
+import { Hub } from '../types/Hub/Hub'
+
+export const ADDRESS_ZERO = '0x0000000000000000000000000000000000000000'
+export const HUB_ADDRESS = '{{address}}'
+
+export let ZERO_BI = BigInt.zero()
+export let ONE_BI = BigInt.fromI32(1)
+export let ZERO_BD = BigDecimal.zero()
+export let ONE_BD = BigDecimal.fromString('1')
+export let BI_18 = BigInt.fromI32(18)
+
+export let hubContract = Hub.bind(Address.fromString(HUB_ADDRESS))
+
+export const USDC_ADDRESS = '{{USDC_ADDRESS}}'
+export const WETH_ADDRESS = '{{WETH_ADDRESS}}'
+
+// token where amounts should contribute to tracked volume and liquidity
+// usually tokens that many tokens are paired with
+export let WHITELIST_TOKENS: string[] = [
+  WETH_ADDRESS,
+  USDC_ADDRESS,
+{{#WHITELIST_TOKENS}}
+  '{{.}}',
+{{/WHITELIST_TOKENS}}
+]
+
+export let STABLE_COINS: string[] = [
+  USDC_ADDRESS,
+{{#STABLE_COINS}}
+  '{{.}}',
+{{/STABLE_COINS}}
+]

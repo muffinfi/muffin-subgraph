@@ -1,0 +1,37 @@
+{
+  "name": "muffin-rinkeby",
+  "license": "UNLICENSED",
+  "scripts": {
+    "js-yaml": "js-yaml",
+    "codegen": "graph codegen --output-dir src/types/",
+    "build": "graph build",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ virtues-milkier/muffin-rinkeby",
+    "prepare:mainnet": "js-yaml config/mainnet.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/mainnet.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
+    "build:mainnet": "yarn prepare:mainnet && yarn build",
+    "deploy:mainnet": "yarn prepare:mainnet && graph deploy --node https://api.thegraph.com/deploy/ muffin/muffin",
+    "prepare:rinkeby": "js-yaml config/rinkeby.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/rinkeby.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
+    "build:rinkeby": "yarn prepare:rinkeby && yarn build",
+    "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ virtues-milkier/muffin-rinkeby",
+    "prepare:hardhat": "js-yaml config/hardhat.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/hardhat.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
+    "build:hardhat": "yarn prepare:hardhat && yarn build",
+    "create:hardhat": "graph create --node http://localhost:8020/ virtues-milkier/muffin-rinkeby",
+    "remove:hardhat": "graph remove --node http://localhost:8020/ virtues-milkier/muffin-rinkeby",
+    "deploy:hardhat": "yarn prepare:hardhat && graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 virtues-milkier/muffin-rinkeby"
+  },
+  "dependencies": {
+    "@graphprotocol/graph-ts": "0.24.1"
+  },
+  "devDependencies": {
+    "@graphprotocol/graph-cli": "^0.26.0",
+    "@typescript-eslint/eslint-plugin": "^5.10.1",
+    "@typescript-eslint/parser": "^5.10.1",
+    "eslint": "^8.7.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-prettier": "^4.0.0",
+    "js-yaml": "^4.1.0",
+    "mustache": "^4.2.0",
+    "prettier": "^2.5.1",
+    "source-map-support": "^0.5.21",
+    "typescript": "^4.5.5"
+  }
+}

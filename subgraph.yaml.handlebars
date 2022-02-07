@@ -1,0 +1,59 @@
+specVersion: 0.0.4
+schema:
+  file: ./schema.graphql
+dataSources:
+  - kind: ethereum
+    name: Hub
+    network: {{network}}
+    source:
+      abi: Hub
+      address: '{{address}}'
+      startBlock: {{startBlock}}
+    mapping:
+      kind: ethereum/events
+      apiVersion: 0.0.6
+      language: wasm/assemblyscript
+      file: ./src/mappings/hub.ts
+      entities:
+        - Hub
+        - Bundle
+        - Token
+        - Pool
+        - Tier
+        - Tick
+        - Transaction
+        - Mint
+        - Burn
+        - Swap
+        - SwapTierData
+        - MuffinDayData
+        - PoolDayData
+        - PoolHourData
+        - TierDayData
+        - TierHourData
+        - TokenDayData
+        - TokenHourData
+      abis:
+        - name: Hub
+          file: ./abis/Hub.json
+        - name: ERC20
+          file: ./abis/ERC20.json
+        - name: ERC20SymbolBytes
+          file: ./abis/ERC20SymbolBytes.json
+        - name: ERC20NameBytes
+          file: ./abis/ERC20NameBytes.json
+        - name: Manager
+          file: ./abis/Manager.json
+        - name: HubPositions
+          file: ./abis/HubPositions.json
+      eventHandlers:
+        - event: PoolCreated(indexed address,indexed address)
+          handler: handlePoolCreated
+        - event: UpdateTier(indexed bytes32,indexed uint8,indexed uint24,uint8)
+          handler: handleUpdateTier
+        - event: Mint(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint96,uint256,uint256)
+          handler: handleMint
+        - event: Burn(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint96,uint256,uint256,uint256,uint256)
+          handler: handleBurn
+        - event: Swap(indexed bytes32,indexed address,indexed address,int256,int256,uint256,uint256[])
+          handler: handleSwap
