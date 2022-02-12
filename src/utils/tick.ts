@@ -19,7 +19,7 @@ export function getTickId(poolId: string, tierId: i32, tickIdx: i32): string {
 
 export function createTick(tickId: string, tickIdx: i32, poolId: string, tierId: i32, event: ethereum.Event): Tick {
   let tick = new Tick(tickId)
-  tick.tickIdx = BigInt.fromI32(tickIdx)
+  tick.tickIdx = tickIdx
   tick.pool = poolId
   tick.poolId = poolId
   tick.tier = getTierId(poolId, tierId)
@@ -73,7 +73,7 @@ export function feeTierToTickSpacing(feeTier: BigInt): BigInt {
 
 export function updateTickFeeVarsAndSave(tick: Tick, event: ethereum.Event): void {
   // not all ticks are initialized so obtaining null is expected behavior
-  let tickResult = hubContract.getTick(convertPoolIdToBytes(tick.poolId), tick.tierId, tick.tickIdx.toI32())
+  let tickResult = hubContract.getTick(convertPoolIdToBytes(tick.poolId), tick.tierId, tick.tickIdx)
   let liquidityLower = decodeLiquidityD8(tickResult.liquidityLowerD8)
   let liquidityUpper = decodeLiquidityD8(tickResult.liquidityUpperD8)
   tick.liquidityNet = liquidityLower.minus(liquidityUpper)

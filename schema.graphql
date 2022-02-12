@@ -220,7 +220,7 @@ type Tick @entity {
   # tier id
   tierId: Int!
   # tick index
-  tickIdx: BigInt!
+  tickIdx: Int!
   # pointer to pool
   pool: Pool!
   # pointer to tier
