@@ -266,6 +266,8 @@ type Position @entity {
   # Positions created through Manager
   # NFT token id
   id: ID!
+  # NFT token id for sorting
+  tokenId: BigInt!
   # owner of the NFT
   owner: Bytes!
   # pool position is within
@@ -282,6 +284,10 @@ type Position @entity {
   tickUpper: Tick!
   # total position liquidity
   liquidity: BigInt!
+  # limit order type: one of [0, 1, 2]
+  limitOrderType: Int!
+  # settlement snapshot id
+  settlementSnapshotId: BigInt!
   # amount of token 0 ever deposited to position
   depositedToken0: BigDecimal!
   # amount of token 1 ever deposited to position
@@ -314,6 +320,8 @@ type Position @entity {
 type PositionSnapshot @entity {
   # <NFT token id>#<block number>
   id: ID!
+  # NFT token id for sorting
+  tokenId: BigInt!
   # owner of the NFT
   owner: Bytes!
   # pool the position is within
@@ -328,6 +336,10 @@ type PositionSnapshot @entity {
   timestamp: BigInt!
   # total position liquidity
   liquidity: BigInt!
+  # limit order type: one of [0, 1, 2]
+  limitOrderType: Int!
+  # settlement snapshot id
+  settlementSnapshotId: BigInt!
   # amount of token 0 ever deposited to position
   depositedToken0: BigDecimal!
   # amount of token 1 ever deposited to position

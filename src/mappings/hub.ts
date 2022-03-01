@@ -33,6 +33,8 @@ import {
 } from '../utils/tick'
 import { BASE_LIQUIDITY, getTierId } from '../utils/tier'
 import { getOrCreateToken } from '../utils/token'
+import { handleDecreaseLiquidity, handleIncreaseLiquidity } from './manager'
+export { handleCollectSettled, handleSetLimitOrderType } from './manager'
 
 export function handlePoolCreated(event: PoolCreated): void {
   // load engine
@@ -388,6 +390,9 @@ export function handleMint(event: MintEvent): void {
   // Update inner tick vars and save the ticks
   updateTickFeeVarsAndSave(lowerTick, event)
   updateTickFeeVarsAndSave(upperTick, event)
+
+  // Mint event also serve as liquidity increased in a position NFT
+  handleIncreaseLiquidity(event)
 }
 
 export function handleBurn(event: BurnEvent): void {
@@ -510,6 +515,9 @@ export function handleBurn(event: BurnEvent): void {
   pool.save()
   engine.save()
   burn.save()
+
+  // Burn event also serve as liquidity decreased/fee collected in a position NFT
+  handleDecreaseLiquidity(event)
 }
 
 export function handleSwap(event: SwapEvent): void {

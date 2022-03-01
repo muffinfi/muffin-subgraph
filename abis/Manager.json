@@ -3,7 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_engine",
+        "name": "_hub",
         "type": "address"
       },
       {
@@ -14,6 +14,11 @@
     ],
     "stateMutability": "nonpayable",
     "type": "constructor"
+  },
+  {
+    "inputs": [],
+    "name": "DeadlinePassed",
+    "type": "error"
   },
   {
     "inputs": [],
@@ -280,7 +285,7 @@
     ],
     "name": "createPool",
     "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "payable",
     "type": "function"
   },
   {
@@ -358,19 +363,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "engine",
-    "outputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "bytes",
@@ -401,6 +393,11 @@
         "internalType": "bool",
         "name": "toAccount",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "deadline",
+        "type": "uint256"
       }
     ],
     "name": "exactIn",
@@ -455,6 +452,11 @@
         "internalType": "bool",
         "name": "toAccount",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "deadline",
+        "type": "uint256"
       }
     ],
     "name": "exactInSingle",
@@ -499,6 +501,11 @@
         "internalType": "bool",
         "name": "toAccount",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "deadline",
+        "type": "uint256"
       }
     ],
     "name": "exactOut",
@@ -553,6 +560,11 @@
         "internalType": "bool",
         "name": "toAccount",
         "type": "bool"
+      },
+      {
+        "internalType": "uint256",
+        "name": "deadline",
+        "type": "uint256"
       }
     ],
     "name": "exactOutSingle",
@@ -626,19 +638,49 @@
         "type": "int24"
       },
       {
-        "internalType": "uint96",
-        "name": "liquidityD8",
-        "type": "uint96"
-      },
+        "components": [
+          {
+            "internalType": "uint96",
+            "name": "liquidityD8",
+            "type": "uint96"
+          },
+          {
+            "internalType": "uint80",
+            "name": "feeGrowthInside0Last",
+            "type": "uint80"
+          },
+          {
+            "internalType": "uint80",
+            "name": "feeGrowthInside1Last",
+            "type": "uint80"
+          },
+          {
+            "internalType": "uint8",
+            "name": "limitOrderType",
+            "type": "uint8"
+          },
+          {
+            "internalType": "uint32",
+            "name": "settlementSnapshotId",
+            "type": "uint32"
+          }
+        ],
+        "internalType": "struct Positions.Position",
+        "name": "position",
+        "type": "tuple"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "hub",
+    "outputs": [
       {
-        "internalType": "uint80",
-        "name": "feeGrowthInside0Last",
-        "type": "uint80"
-      },
-      {
-        "internalType": "uint80",
-        "name": "feeGrowthInside1Last",
-        "type": "uint80"
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -1022,6 +1064,11 @@
             "internalType": "bool",
             "name": "collectAllFees",
             "type": "bool"
+          },
+          {
+            "internalType": "bool",
+            "name": "settled",
+            "type": "bool"
           }
         ],
         "internalType": "struct PositionManager.RemoveLiquidityParams",
@@ -1198,6 +1245,24 @@
     "name": "setApprovalForAll",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "limitOrderType",
+        "type": "uint8"
+      }
+    ],
+    "name": "setLimitOrderType",
+    "outputs": [],
+    "stateMutability": "payable",
     "type": "function"
   },
   {
