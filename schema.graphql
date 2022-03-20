@@ -262,6 +262,23 @@ type Tick @entity {
   feeGrowthOutside1X64: BigInt!
 }
 
+type AccountTokenBalance @entity {
+  # format: <token address>#<account hash>
+  id: ID!
+  # internal account id
+  accountHash: String!
+  # account owner
+  owner: Bytes!
+  # account ref id
+  accRefId: BigInt!
+  # token address
+  tokenAddress: String!
+  # linked token
+  token: Token!
+  # balance of token of this internal account
+  balance: BigDecimal!
+}
+
 type Position @entity {
   # Positions created through Manager
   # NFT token id

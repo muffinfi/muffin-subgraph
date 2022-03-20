@@ -63,6 +63,10 @@ dataSources:
           handler: handleSetLimitOrderType
         - event: CollectSettled(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint96,uint256,uint256,uint256,uint256)
           handler: handleCollectSettled
+        - event: Deposit(indexed address,indexed uint256,indexed address,uint256)
+          handler: handleDeposit
+        - event: Withdraw(indexed address,indexed uint256,indexed address,uint256)
+          handler: handleWithdraw
   - kind: ethereum
     name: Manager
     network: rinkeby

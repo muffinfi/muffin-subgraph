@@ -1,5 +1,13 @@
 import { BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
-import { Burn as BurnEvent, Mint as MintEvent, PoolCreated, Swap as SwapEvent, UpdateTier } from '../types/Hub/Hub'
+import {
+  Burn as BurnEvent,
+  Deposit,
+  Mint as MintEvent,
+  PoolCreated,
+  Swap as SwapEvent,
+  UpdateTier,
+  Withdraw,
+} from '../types/Hub/Hub'
 import { Bundle, Burn, Hub, Mint, Pool, Swap, SwapTierData, Tick, Tier, Token } from '../types/schema'
 import {
   ceilDiv,
@@ -10,6 +18,7 @@ import {
   loadTransaction,
   safeDiv,
 } from '../utils'
+import { getAccountTokenBalance } from '../utils/accountTokenBalance'
 import { hubContract, HUB_ADDRESS, ONE_BI, WHITELIST_TOKENS, ZERO_BD, ZERO_BI } from '../utils/constants'
 import {
   updateMuffinDayData,
@@ -847,4 +856,27 @@ export function handleSwap(event: SwapEvent): void {
       }
     }
   }
+
+  // update internal account balances
+  // let token0Balance = getAccountTokenBalance(event.params.sender)
+}
+
+export function handleDeposit(event: Deposit): void {
+  let record = getAccountTokenBalance(event.params.recipient, event.params.recipientAccRefId, event.params.token)
+  if (!record) return
+  let token = getOrCreateToken(event.params.token)
+  if (!token) return
+  let amount = convertTokenToDecimal(event.params.amount, token.decimals)
+  record.balance = record.balance.plus(amount)
+  record.save()
+}
+
+export function handleWithdraw(event: Withdraw): void {
+  let record = getAccountTokenBalance(event.transaction.from, event.params.senderAccRefId, event.params.token)
+  if (!record) return
+  let token = getOrCreateToken(event.params.token)
+  if (!token) return
+  let amount = convertTokenToDecimal(event.params.amount, token.decimals)
+  record.balance = record.balance.minus(amount)
+  record.save()
 }
