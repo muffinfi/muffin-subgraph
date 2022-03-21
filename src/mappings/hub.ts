@@ -1,6 +1,7 @@
 import { BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
 import {
   Burn as BurnEvent,
+  CollectSettled,
   Deposit,
   Mint as MintEvent,
   PoolCreated,
@@ -18,7 +19,7 @@ import {
   loadTransaction,
   safeDiv,
 } from '../utils'
-import { getAccountTokenBalance } from '../utils/accountTokenBalance'
+import { getAccountTokenBalance, updateAndSaveTokenBalance } from '../utils/accountTokenBalance'
 import { hubContract, HUB_ADDRESS, ONE_BI, WHITELIST_TOKENS, ZERO_BD, ZERO_BI } from '../utils/constants'
 import {
   updateMuffinDayData,
@@ -29,7 +30,7 @@ import {
   updateTokenDayData,
   updateTokenHourData,
 } from '../utils/intervalUpdates'
-import { convertPoolIdToBytes, getPoolId } from '../utils/pool'
+import { convertPoolIdToBytes } from '../utils/pool'
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX72ToTokenPrices } from '../utils/pricing'
 import {
   createTick,
@@ -43,7 +44,7 @@ import {
 import { BASE_LIQUIDITY, getTierId } from '../utils/tier'
 import { getOrCreateToken } from '../utils/token'
 import { handleDecreaseLiquidity, handleIncreaseLiquidity } from './manager'
-export { handleCollectSettled, handleSetLimitOrderType } from './manager'
+export { handleSetLimitOrderType } from './manager'
 
 export function handlePoolCreated(event: PoolCreated): void {
   // load engine
@@ -70,7 +71,7 @@ export function handlePoolCreated(event: PoolCreated): void {
 
   let token0 = getOrCreateToken(event.params.token0)
   let token1 = getOrCreateToken(event.params.token1)
-  let poolId = getPoolId(event.params.token0, event.params.token1)
+  let poolId = event.params.poolId.toHexString()
   let pool = new Pool(poolId)
 
   // fetch info if null
@@ -402,6 +403,15 @@ export function handleMint(event: MintEvent): void {
 
   // Mint event also serve as liquidity increased in a position NFT
   handleIncreaseLiquidity(event)
+
+  // Update internal account balance
+  if (amount0.gt(ZERO_BD)) {
+    updateAndSaveTokenBalance(token0, event.params.sender, event.params.senderAccRefId)
+  }
+
+  if (amount1.gt(ZERO_BD)) {
+    updateAndSaveTokenBalance(token1, event.params.sender, event.params.senderAccRefId)
+  }
 }
 
 export function handleBurn(event: BurnEvent): void {
@@ -527,6 +537,15 @@ export function handleBurn(event: BurnEvent): void {
 
   // Burn event also serve as liquidity decreased/fee collected in a position NFT
   handleDecreaseLiquidity(event)
+
+  // Update internal account balance
+  if (amount0.gt(ZERO_BD) || feeAmount0.gt(ZERO_BD)) {
+    updateAndSaveTokenBalance(token0, event.params.owner, event.params.ownerAccRefId)
+  }
+
+  if (amount1.gt(ZERO_BD) || feeAmount1.gt(ZERO_BD)) {
+    updateAndSaveTokenBalance(token1, event.params.owner, event.params.ownerAccRefId)
+  }
 }
 
 export function handleSwap(event: SwapEvent): void {
@@ -857,25 +876,46 @@ export function handleSwap(event: SwapEvent): void {
     }
   }
 
-  // update internal account balances
-  // let token0Balance = getAccountTokenBalance(event.params.sender)
+  // Update internal account balance
+  if (amount0.lt(ZERO_BD)) {
+    updateAndSaveTokenBalance(token0, event.params.sender, event.params.senderAccRefId)
+    updateAndSaveTokenBalance(token1, event.params.recipient, event.params.recipientAccRefId)
+  } else {
+    updateAndSaveTokenBalance(token1, event.params.sender, event.params.senderAccRefId)
+    updateAndSaveTokenBalance(token0, event.params.recipient, event.params.recipientAccRefId)
+  }
+}
+
+export function handleCollectSettled(event: CollectSettled): void {
+  handleDecreaseLiquidity(changetype<BurnEvent>(event))
+
+  let pool = Pool.load(event.params.poolId.toHexString())!
+  let token0 = Token.load(pool.token0)!
+  let token1 = Token.load(pool.token1)!
+
+  if (event.params.amount0.gt(ZERO_BI) || event.params.feeAmount0.gt(ZERO_BI)) {
+    updateAndSaveTokenBalance(token0, event.params.owner, event.params.ownerAccRefId)
+  }
+  if (event.params.amount1.gt(ZERO_BI) || event.params.feeAmount1.gt(ZERO_BI)) {
+    updateAndSaveTokenBalance(token1, event.params.owner, event.params.ownerAccRefId)
+  }
 }
 
 export function handleDeposit(event: Deposit): void {
   let record = getAccountTokenBalance(event.params.recipient, event.params.recipientAccRefId, event.params.token)
-  if (!record) return
+  if (record === null) return
   let token = getOrCreateToken(event.params.token)
-  if (!token) return
+  if (token === null) return
   let amount = convertTokenToDecimal(event.params.amount, token.decimals)
   record.balance = record.balance.plus(amount)
   record.save()
 }
 
 export function handleWithdraw(event: Withdraw): void {
-  let record = getAccountTokenBalance(event.transaction.from, event.params.senderAccRefId, event.params.token)
-  if (!record) return
+  let record = getAccountTokenBalance(event.params.sender, event.params.senderAccRefId, event.params.token)
+  if (record === null) return
   let token = getOrCreateToken(event.params.token)
-  if (!token) return
+  if (token === null) return
   let amount = convertTokenToDecimal(event.params.amount, token.decimals)
   record.balance = record.balance.minus(amount)
   record.save()

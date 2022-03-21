@@ -1,4 +1,4 @@
-import { Address, BigInt, Bytes, crypto, ethereum } from '@graphprotocol/graph-ts'
+import { Address, BigInt, ByteArray, Bytes, crypto, ethereum } from '@graphprotocol/graph-ts'
 import { convertTokenToDecimal } from '.'
 import { AccountTokenBalance, Token } from '../types/schema'
 import { hubContract, ZERO_BD, ZERO_BI } from './constants'
@@ -25,7 +25,7 @@ export function getAccountTokenBalance(
 
   let id = tokenAddress.toHexString() + '#' + accountHash
   let balance = AccountTokenBalance.load(id)
-  if (!balance) {
+  if (balance === null) {
     balance = new AccountTokenBalance(id)
     balance.owner = owner
     balance.accRefId = accRefId
@@ -40,14 +40,14 @@ export function getAccountTokenBalance(
 export function refreshTokenBalance(tokenBalance: AccountTokenBalance, decimals: BigInt): void {
   let amount = hubContract.accounts(
     Address.fromString(tokenBalance.tokenAddress),
-    Bytes.fromHexString(tokenBalance.accountHash)
+    Bytes.fromByteArray(ByteArray.fromHexString(tokenBalance.accountHash))
   )
   tokenBalance.balance = convertTokenToDecimal(amount, decimals)
 }
 
 export function updateAndSaveTokenBalance(token: Token, owner: Address, accRefId: BigInt): void {
   let record = getAccountTokenBalance(owner, accRefId, Address.fromString(token.id))
-  if (!record) {
+  if (record === null) {
     return
   }
   refreshTokenBalance(record, token.decimals)

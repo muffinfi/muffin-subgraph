@@ -49,23 +49,23 @@ dataSources:
         - name: HubPositions
           file: ./abis/HubPositions.json
       eventHandlers:
-        - event: PoolCreated(indexed address,indexed address)
+        - event: PoolCreated(indexed address,indexed address,indexed bytes32)
           handler: handlePoolCreated
         - event: UpdateTier(indexed bytes32,indexed uint8,indexed uint24,uint8)
           handler: handleUpdateTier
-        - event: Mint(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint96,uint256,uint256)
+        - event: Mint(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,address,uint256,uint96,uint256,uint256)
           handler: handleMint
-        - event: Burn(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint96,uint256,uint256,uint256,uint256)
+        - event: Burn(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint256,uint96,uint256,uint256,uint256,uint256)
           handler: handleBurn
-        - event: Swap(indexed bytes32,indexed address,indexed address,int256,int256,uint256,uint256[])
+        - event: Swap(indexed bytes32,indexed address,indexed address,uint256,uint256,int256,int256,uint256,uint256[])
           handler: handleSwap
         - event: SetLimitOrderType(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint8)
           handler: handleSetLimitOrderType
-        - event: CollectSettled(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint96,uint256,uint256,uint256,uint256)
+        - event: CollectSettled(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,uint256,uint96,uint256,uint256,uint256,uint256)
           handler: handleCollectSettled
-        - event: Deposit(indexed address,indexed uint256,indexed address,uint256)
+        - event: Deposit(indexed address,indexed uint256,indexed address,uint256,address)
           handler: handleDeposit
-        - event: Withdraw(indexed address,indexed uint256,indexed address,uint256)
+        - event: Withdraw(indexed address,indexed uint256,indexed address,uint256,address)
           handler: handleWithdraw
   - kind: ethereum
     name: Manager

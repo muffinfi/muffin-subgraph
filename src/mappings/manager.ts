@@ -1,5 +1,5 @@
 import { Address } from '@graphprotocol/graph-ts'
-import { Burn, CollectSettled, Mint, SetLimitOrderType } from '../types/Hub/Hub'
+import { Burn, Mint, SetLimitOrderType } from '../types/Hub/Hub'
 import { Transfer } from '../types/Manager/Manager'
 import { Bundle, Token } from '../types/schema'
 import { convertTokenToDecimal, decodeLiquidityD8 } from '../utils'
@@ -122,8 +122,4 @@ export function handleSetLimitOrderType(event: SetLimitOrderType): void {
   position.save()
 
   savePositionSnapshot(position, event)
-}
-
-export function handleCollectSettled(event: CollectSettled): void {
-  handleDecreaseLiquidity(changetype<Burn>(event))
 }

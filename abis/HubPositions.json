@@ -80,6 +80,12 @@
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "ownerAccRefId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "uint96",
         "name": "liquidityD8",
         "type": "uint96"
@@ -178,6 +184,12 @@
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "ownerAccRefId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "uint96",
         "name": "liquidityD8",
         "type": "uint96"
@@ -236,6 +248,12 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
       }
     ],
     "name": "Deposit",
@@ -245,7 +263,7 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "address",
         "name": "governance",
         "type": "address"
@@ -295,6 +313,18 @@
       },
       {
         "indexed": false,
+        "internalType": "address",
+        "name": "sender",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "senderAccRefId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "uint96",
         "name": "liquidityD8",
         "type": "uint96"
@@ -329,6 +359,12 @@
         "internalType": "address",
         "name": "token1",
         "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "poolId",
+        "type": "bytes32"
       }
     ],
     "name": "PoolCreated",
@@ -406,6 +442,18 @@
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "senderAccRefId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "recipientAccRefId",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "int256",
         "name": "amount0",
         "type": "int256"
@@ -430,6 +478,25 @@
       }
     ],
     "name": "Swap",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "tickSpacing",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "protocolFee",
+        "type": "uint8"
+      }
+    ],
+    "name": "UpdateDefaultParameters",
     "type": "event"
   },
   {
@@ -494,7 +561,7 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "recipient",
+        "name": "sender",
         "type": "address"
       },
       {
@@ -514,6 +581,12 @@
         "internalType": "uint256",
         "name": "amount",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "recipient",
+        "type": "address"
       }
     ],
     "name": "Withdraw",
@@ -638,7 +711,13 @@
       }
     ],
     "name": "collectProtocolFee",
-    "outputs": [],
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      }
+    ],
     "stateMutability": "nonpayable",
     "type": "function"
   },

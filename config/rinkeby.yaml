@@ -1,8 +1,8 @@
 network: rinkeby
-address: '0x37Ea623F66848f35cD296ff3251B4a2faA65f482'
-startBlock: 10046873
-managerAddress: '0xD65f4e56dbeA10E7802A0D3865ca84138432463B'
-managerStartBlock: 10126318
+address: '0xa488583a8b2caecf8e9a576e514e64c8f3b744c8'
+startBlock: 10346651
+managerAddress: '0x3ebb5694bb99ada53026cacfeb3cb9f6249f5310'
+managerStartBlock: 10346651
 USDC_ADDRESS: '0x4bac7231ba2392c55e8190de7d216d7ed7b9bf5f'
 WETH_ADDRESS: '0xc778417e063141139fce010982780140aa0cd5ab'
 WHITELIST_TOKENS:
