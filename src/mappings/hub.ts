@@ -878,11 +878,13 @@ export function handleSwap(event: SwapEvent): void {
 
   // Update internal account balance
   if (amount0.lt(ZERO_BD)) {
-    updateAndSaveTokenBalance(token0, event.params.sender, event.params.senderAccRefId)
-    updateAndSaveTokenBalance(token1, event.params.recipient, event.params.recipientAccRefId)
-  } else {
+    // swapping token1 for token0
     updateAndSaveTokenBalance(token1, event.params.sender, event.params.senderAccRefId)
     updateAndSaveTokenBalance(token0, event.params.recipient, event.params.recipientAccRefId)
+  } else {
+    // swapping token0 for token1
+    updateAndSaveTokenBalance(token0, event.params.sender, event.params.senderAccRefId)
+    updateAndSaveTokenBalance(token1, event.params.recipient, event.params.recipientAccRefId)
   }
 }
 
