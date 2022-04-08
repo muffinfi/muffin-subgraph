@@ -904,20 +904,20 @@ export function handleCollectSettled(event: CollectSettled): void {
 }
 
 export function handleDeposit(event: Deposit): void {
-  let record = getAccountTokenBalance(event.params.recipient, event.params.recipientAccRefId, event.params.token)
-  if (record === null) return
   let token = getOrCreateToken(event.params.token)
   if (token === null) return
+  let record = getAccountTokenBalance(event.params.recipient, event.params.recipientAccRefId, event.params.token)
+  if (record === null) return
   let amount = convertTokenToDecimal(event.params.amount, token.decimals)
   record.balance = record.balance.plus(amount)
+  token.save()
   record.save()
 }
 
 export function handleWithdraw(event: Withdraw): void {
+  let token = Token.load(event.params.token.toHexString())!
   let record = getAccountTokenBalance(event.params.sender, event.params.senderAccRefId, event.params.token)
   if (record === null) return
-  let token = getOrCreateToken(event.params.token)
-  if (token === null) return
   let amount = convertTokenToDecimal(event.params.amount, token.decimals)
   record.balance = record.balance.minus(amount)
   record.save()
