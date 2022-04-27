@@ -19,19 +19,19 @@
     "deploy:hardhat": "yarn prepare:hardhat && graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 virtues-milkier/muffin-rinkeby"
   },
   "dependencies": {
-    "@graphprotocol/graph-ts": "0.24.1"
+    "@graphprotocol/graph-ts": "0.26.0"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "^0.26.0",
-    "@typescript-eslint/eslint-plugin": "^5.10.1",
-    "@typescript-eslint/parser": "^5.10.1",
-    "eslint": "^8.7.0",
-    "eslint-config-prettier": "^8.3.0",
+    "@graphprotocol/graph-cli": "^0.29.0",
+    "@typescript-eslint/eslint-plugin": "^5.21.0",
+    "@typescript-eslint/parser": "^5.21.0",
+    "eslint": "^8.14.0",
+    "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.0.0",
     "js-yaml": "^4.1.0",
     "mustache": "^4.2.0",
-    "prettier": "^2.5.1",
+    "prettier": "^2.6.2",
     "source-map-support": "^0.5.21",
-    "typescript": "^4.5.5"
+    "typescript": "^4.6.3"
   }
 }
