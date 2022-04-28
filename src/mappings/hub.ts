@@ -205,8 +205,11 @@ export function handleUpdateTier(event: UpdateTier): void {
   let onChainTier = hubContract.getTier(convertPoolIdToBytes(pool.id), event.params.tierId)
   let sqrtPrice = onChainTier.sqrtPrice
 
-  let amount0 = ceilDiv(BigInt.fromI32(100).leftShift(80), sqrtPrice).toBigDecimal()
-  let amount1 = ceilDiv(BigInt.fromI32(100).times(sqrtPrice), ONE_BI.leftShift(64)).toBigDecimal()
+  let amount0 = convertTokenToDecimal(ceilDiv(BigInt.fromI32(100).leftShift(72 + 8), sqrtPrice), token0.decimals)
+  let amount1 = convertTokenToDecimal(
+    ceilDiv(BigInt.fromI32(100).times(sqrtPrice), ONE_BI.leftShift(72 - 8)),
+    token1.decimals
+  )
 
   // reset tvl aggregates until new amounts calculated
   engine.totalValueLockedETH = engine.totalValueLockedETH.minus(pool.totalValueLockedETH)
