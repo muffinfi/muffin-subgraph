@@ -64,33 +64,38 @@ export function findEthPerToken(token: Token): BigDecimal {
   if (STABLE_COINS.includes(token.id)) {
     priceSoFar = safeDiv(ONE_BD, bundle.ethPriceUSD)
   } else {
+    // use the price from the largest liquidity tier
     for (let i = 0; i < whiteList.length; ++i) {
       let poolId = whiteList[i]
       let pool = Pool.load(poolId)!
+
       for (let j = 0; j < pool.tierIds.length; ++j) {
         let tierId = pool.tierIds[j]
         let tier = Tier.load(tierId)!
-        if (tier.liquidity.gt(ZERO_BI)) {
-          if (tier.token0 == token.id) {
-            // whitelist token is token1
-            let token1 = Token.load(tier.token1)!
-            // get the derived ETH in pool tier
-            let ethLocked = tier.totalValueLockedToken1.times(token1.derivedETH)
-            if (ethLocked.gt(largestLiquidityETH) && ethLocked.gt(MINIMUM_ETH_LOCKED)) {
-              largestLiquidityETH = ethLocked
-              // token1 per our token * Eth per token1
-              priceSoFar = tier.token1Price.times(token1.derivedETH)
-            }
+        if (!tier.liquidity.gt(ZERO_BI)) continue
+
+        if (tier.token0 == token.id) {
+          // whitelist token is token1
+          let token1 = Token.load(tier.token1)!
+          // get the derived ETH in pool tier
+          let ethLocked = tier.totalValueLockedToken1.times(token1.derivedETH)
+
+          if (ethLocked.gt(largestLiquidityETH) && ethLocked.gt(MINIMUM_ETH_LOCKED)) {
+            largestLiquidityETH = ethLocked
+            // token1 per our token * Eth per token1
+            priceSoFar = tier.token1Price.times(token1.derivedETH)
           }
-          if (tier.token1 == token.id) {
-            let token0 = Token.load(tier.token0)!
-            // get the derived ETH in pool tier
-            let ethLocked = tier.totalValueLockedToken0.times(token0.derivedETH)
-            if (ethLocked.gt(largestLiquidityETH) && ethLocked.gt(MINIMUM_ETH_LOCKED)) {
-              largestLiquidityETH = ethLocked
-              // token0 per our token * ETH per token0
-              priceSoFar = tier.token0Price.times(token0.derivedETH)
-            }
+        }
+
+        if (tier.token1 == token.id) {
+          let token0 = Token.load(tier.token0)!
+          // get the derived ETH in pool tier
+          let ethLocked = tier.totalValueLockedToken0.times(token0.derivedETH)
+
+          if (ethLocked.gt(largestLiquidityETH) && ethLocked.gt(MINIMUM_ETH_LOCKED)) {
+            largestLiquidityETH = ethLocked
+            // token0 per our token * ETH per token0
+            priceSoFar = tier.token0Price.times(token0.derivedETH)
           }
         }
       }
