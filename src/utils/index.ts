@@ -1,6 +1,6 @@
 import { BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
-import { Transaction } from '../types/schema'
-import { BI_18, ONE_BD, ONE_BI, ZERO_BD, ZERO_BI } from './constants'
+import { Bundle, Hub, Transaction } from '../types/schema'
+import { BI_18, HUB_ADDRESS, ONE_BD, ONE_BI, ZERO_BD, ZERO_BI } from './constants'
 
 export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -111,4 +111,28 @@ export function loadTransaction(event: ethereum.Event): Transaction {
   transaction.gasPrice = event.transaction.gasPrice
   transaction.save()
   return transaction
+}
+
+export function getOrCreateHub(): Hub {
+  let hub = Hub.load(HUB_ADDRESS)
+  if (hub === null) {
+    hub = new Hub(HUB_ADDRESS)
+    hub.poolCount = ZERO_BI
+    hub.totalVolumeETH = ZERO_BD
+    hub.totalVolumeUSD = ZERO_BD
+    hub.untrackedVolumeUSD = ZERO_BD
+    hub.totalFeesUSD = ZERO_BD
+    hub.totalFeesETH = ZERO_BD
+    hub.totalValueLockedETH = ZERO_BD
+    hub.totalValueLockedUSD = ZERO_BD
+    hub.txCount = ZERO_BI
+    hub.defaultTickSpacing = 200
+    hub.defaultProtocolFee = 0
+
+    // create new bundle for tracking eth price
+    let bundle = new Bundle('1')
+    bundle.ethPriceUSD = ZERO_BD
+    bundle.save()
+  }
+  return hub
 }

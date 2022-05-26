@@ -6,6 +6,8 @@ import {
   Mint as MintEvent,
   PoolCreated,
   Swap as SwapEvent,
+  UpdateDefaultParameters,
+  UpdatePool,
   UpdateTier,
   Withdraw,
 } from '../types/Hub/Hub'
@@ -16,6 +18,7 @@ import {
   decodeLiquidityD8,
   decodeTierData,
   extractAmountDistributionAtIndex,
+  getOrCreateHub,
   loadTransaction,
   safeDiv,
 } from '../utils'
@@ -46,28 +49,18 @@ import { getOrCreateToken } from '../utils/token'
 import { handleDecreaseLiquidity, handleIncreaseLiquidity } from './manager'
 export { handleSetLimitOrderType } from './manager'
 
+export function handleUpdateDefaultParameters(event: UpdateDefaultParameters): void {
+  let hub = getOrCreateHub()
+  hub.defaultTickSpacing = event.params.tickSpacing
+  hub.defaultProtocolFee = event.params.protocolFee
+  hub.save()
+}
+
 export function handlePoolCreated(event: PoolCreated): void {
   // load engine
-  let engine = Hub.load(HUB_ADDRESS)
-  if (engine === null) {
-    engine = new Hub(HUB_ADDRESS)
-    engine.poolCount = ZERO_BI
-    engine.totalVolumeETH = ZERO_BD
-    engine.totalVolumeUSD = ZERO_BD
-    engine.untrackedVolumeUSD = ZERO_BD
-    engine.totalFeesUSD = ZERO_BD
-    engine.totalFeesETH = ZERO_BD
-    engine.totalValueLockedETH = ZERO_BD
-    engine.totalValueLockedUSD = ZERO_BD
-    engine.txCount = ZERO_BI
+  let hub = getOrCreateHub()
 
-    // create new bundle for tracking eth price
-    let bundle = new Bundle('1')
-    bundle.ethPriceUSD = ZERO_BD
-    bundle.save()
-  }
-
-  engine.poolCount = engine.poolCount.plus(ONE_BI)
+  hub.poolCount = hub.poolCount.plus(ONE_BI)
 
   let token0 = getOrCreateToken(event.params.token0)
   let token1 = getOrCreateToken(event.params.token1)
@@ -106,6 +99,8 @@ export function handlePoolCreated(event: PoolCreated): void {
   pool.liquidityProviderCount = ZERO_BI
   pool.txCount = ZERO_BI
   pool.liquidity = ZERO_BI
+  pool.tickSpacing = hub.defaultTickSpacing
+  pool.protocolFee = hub.defaultProtocolFee
   pool.totalValueLockedToken0 = ZERO_BD
   pool.totalValueLockedToken1 = ZERO_BD
   pool.totalValueLockedUSD = ZERO_BD
@@ -124,7 +119,19 @@ export function handlePoolCreated(event: PoolCreated): void {
   pool.save()
   token0.save()
   token1.save()
-  engine.save()
+  hub.save()
+
+  let params = hubContract.getPoolParameters(convertPoolIdToBytes(pool.id))
+  pool.tickSpacing = params.value0
+  pool.protocolFee = params.value1
+  pool.save()
+}
+
+export function handleUpdatePool(event: UpdatePool): void {
+  let pool = Pool.load(event.params.poolId.toHexString())!
+  pool.tickSpacing = event.params.tickSpacing
+  pool.protocolFee = event.params.protocolFee
+  pool.save()
 }
 
 export function handleUpdateTier(event: UpdateTier): void {
@@ -158,6 +165,7 @@ export function handleUpdateTier(event: UpdateTier): void {
     tier.volumeUSD = ZERO_BD
     tier.feesUSD = ZERO_BD
     tier.untrackedVolumeUSD = ZERO_BD
+    tier.limitOrderTickSpacingMultiplier = 0
 
     tier.collectedFeesToken0 = ZERO_BD
     tier.collectedFeesToken1 = ZERO_BD
@@ -165,8 +173,11 @@ export function handleUpdateTier(event: UpdateTier): void {
     tier.tierId = event.params.tierId
   }
 
+  tier.limitOrderTickSpacingMultiplier = event.params.limitOrderTickSpacingMultiplier
+
   let sqrtGamma = BigInt.fromI32(event.params.sqrtGamma)
   tier.sqrtGamma = sqrtGamma
+
   tier.feeTier = BigInt.fromI64(10 ** 10)
     .minus(sqrtGamma.times(sqrtGamma))
     .div(BigInt.fromI32(10 ** 5))
@@ -229,6 +240,8 @@ export function handleUpdateTier(event: UpdateTier): void {
   tier.token1Price = prices[1]
 
   tier.tick = BigInt.fromI32(onChainTier.tick)
+  tier.nextTickAbove = BigInt.fromI32(onChainTier.nextTickAbove)
+  tier.nextTickBelow = BigInt.fromI32(onChainTier.nextTickBelow)
   tier.liquidity = onChainTier.liquidity
   tier.feeGrowthGlobal0X64 = onChainTier.feeGrowthGlobal0
   tier.feeGrowthGlobal1X64 = onChainTier.feeGrowthGlobal1
@@ -346,8 +359,8 @@ export function handleMint(event: MintEvent): void {
   mint.owner = event.params.owner
   mint.positionRefId = event.params.positionRefId
   mint.liquidityD8 = event.params.liquidityD8
-  // mint.sender = event.transaction.from
-  // mint.senderAccountId = event.params.senderAccId
+  mint.sender = event.params.sender
+  mint.senderAccRefId = event.params.senderAccRefId
   mint.origin = event.transaction.from
   mint.amount = liquidity
   mint.amount0 = amount0
@@ -497,6 +510,7 @@ export function handleBurn(event: BurnEvent): void {
   burn.token0 = pool.token0
   burn.token1 = pool.token1
   burn.owner = event.params.owner
+  burn.ownerAccRefId = event.params.ownerAccRefId
   burn.positionRefId = event.params.positionRefId
   burn.origin = event.transaction.from
   burn.amount = liquidity
@@ -702,6 +716,8 @@ export function handleSwap(event: SwapEvent): void {
     // update pool tier tick and fee growth
     let onChainTier = hubContract.getTier(convertPoolIdToBytes(pool.id), tier.tierId)
     tier.tick = BigInt.fromI32(onChainTier.tick)
+    tier.nextTickAbove = BigInt.fromI32(onChainTier.nextTickAbove)
+    tier.nextTickBelow = BigInt.fromI32(onChainTier.nextTickBelow)
     tier.feeGrowthGlobal0X64 = onChainTier.feeGrowthGlobal0
     tier.feeGrowthGlobal1X64 = onChainTier.feeGrowthGlobal1
 
@@ -732,7 +748,10 @@ export function handleSwap(event: SwapEvent): void {
   swap.token1 = pool.token1
   swap.sender = event.params.sender
   swap.origin = event.transaction.from
+  swap.sender = event.params.sender
+  swap.senderAccRefId = event.params.senderAccRefId
   swap.recipient = event.params.recipient
+  swap.recipientAccRefId = event.params.recipientAccRefId
   swap.amount0 = amount0
   swap.amount1 = amount1
   swap.amountUSD = amountTotalUSDTracked
@@ -757,7 +776,9 @@ export function handleSwap(event: SwapEvent): void {
     swapTierData.token1 = pool.token1
     swapTierData.sender = event.params.sender
     swapTierData.origin = event.transaction.from
+    swapTierData.senderAccRefId = event.params.senderAccRefId
     swapTierData.recipient = event.params.recipient
+    swapTierData.recipientAccRefId = event.params.recipientAccRefId
     swapTierData.amountDistribution = amountDistribution
     swapTierData.amount0 = amount0.times(amountDistribution)
     swapTierData.amount1 = amount1.times(amountDistribution)

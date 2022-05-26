@@ -49,8 +49,12 @@ dataSources:
         - name: HubPositions
           file: ./abis/HubPositions.json
       eventHandlers:
+        - event: UpdateDefaultParameters(uint8,uint8)
+          handler: handleUpdateDefaultParameters
         - event: PoolCreated(indexed address,indexed address,indexed bytes32)
           handler: handlePoolCreated
+        - event: UpdatePool(indexed bytes32,uint8,uint8)
+          handler: handleUpdatePool
         - event: UpdateTier(indexed bytes32,indexed uint8,indexed uint24,uint8)
           handler: handleUpdateTier
         - event: Mint(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,address,uint256,uint96,uint256,uint256)

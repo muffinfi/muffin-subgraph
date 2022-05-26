@@ -1,6 +1,10 @@
 type Hub @entity {
   # hub address
   id: ID!
+  # default tick spacing
+  defaultTickSpacing: Int!
+  # default protocol fee
+  defaultProtocolFee: Int!
   # amount of pools created
   poolCount: BigInt!
   # amount of transactions all time
@@ -78,6 +82,10 @@ type Pool @entity {
   tierIds: [String!]!
   # in range liquidity
   liquidity: BigInt!
+  # tick spacing
+  tickSpacing: Int!
+  # protocol fee
+  protocolFee: Int!
   # # current price tracker
   # sqrtPrice: BigInt!
   # # tracker for global fee growth
@@ -168,6 +176,12 @@ type Tier @entity {
   token1Price: BigDecimal!
   # current tick
   tick: BigInt
+  # next tick above
+  nextTickAbove: BigInt
+  # next tick below
+  nextTickBelow: BigInt
+  # tick Spacing multiplier for limit order
+  limitOrderTickSpacingMultiplier: Int!
   # # current observation index
   # observationIndex: BigInt!
   # all time token0 swapped
@@ -417,7 +431,7 @@ type Mint @entity {
   # the address that minted the liquidity
   sender: Bytes
   # the account id that minted the liquidity
-  senderAccountId: BigInt
+  senderAccRefId: BigInt
   # txn origin
   origin: Bytes! # the EOA that initiated the txn
   # amount of liquidity minted
@@ -455,6 +469,8 @@ type Burn @entity {
   timestamp: BigInt!
   # owner of position where liquidity was burned
   owner: Bytes
+  # the owner account ref id of owner
+  ownerAccRefId: BigInt
   # position from owner where liquidity was burned
   positionRefId: BigInt
   # txn origin
@@ -496,8 +512,12 @@ type Swap @entity {
   token1: Token!
   # sender of the swap
   sender: Bytes!
+  # the account id of sender
+  senderAccRefId: BigInt
   # recipient of the swap
   recipient: Bytes!
+  # the account id of recipient
+  recipientAccRefId: BigInt
   # txn origin
   origin: Bytes! # the EOA that initiated the txn
   # delta of token0 swapped
@@ -533,8 +553,12 @@ type SwapTierData @entity {
   token1: Token!
   # sender of the swap
   sender: Bytes!
+  # the account id of sender
+  senderAccRefId: BigInt
   # recipient of the swap
   recipient: Bytes!
+  # the account id of recipient
+  recipientAccRefId: BigInt
   # txn origin
   origin: Bytes! # the EOA that initiated the txn
   # delta of token0 swapped
