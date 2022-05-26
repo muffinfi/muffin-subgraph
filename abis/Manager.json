@@ -706,6 +706,19 @@
     "type": "function"
   },
   {
+    "inputs": [],
+    "name": "latestTokenId",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "tokenId",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [
       {
         "components": [
@@ -1314,7 +1327,7 @@
       },
       {
         "internalType": "address",
-        "name": "tokenOut",
+        "name": "",
         "type": "address"
       },
       {
@@ -1324,7 +1337,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "amountOut",
+        "name": "",
         "type": "uint256"
       },
       {
