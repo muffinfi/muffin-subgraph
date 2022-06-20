@@ -180,6 +180,7 @@ export function handleUpdateTier(event: UpdateTier): void {
 
   tier.feeTier = BigInt.fromI64(10 ** 10)
     .minus(sqrtGamma.times(sqrtGamma))
+    .plus(BigInt.fromI32(10 ** 5 / 2)) // round div
     .div(BigInt.fromI32(10 ** 5))
 
   tier.save()
@@ -236,8 +237,8 @@ export function handleUpdateTier(event: UpdateTier): void {
   // init tier
   let prices = sqrtPriceX72ToTokenPrices(sqrtPrice, token0, token1)
   tier.sqrtPrice = sqrtPrice
-  tier.token0Price = prices[0]
-  tier.token1Price = prices[1]
+  tier.token0Price = prices[0] // i.e. token0's price denominated in token1
+  tier.token1Price = prices[1] // i.e. token1's price denominated in token1
 
   tier.tick = BigInt.fromI32(onChainTier.tick)
   tier.nextTickAbove = BigInt.fromI32(onChainTier.nextTickAbove)
@@ -606,9 +607,19 @@ export function handleSwap(event: SwapEvent): void {
   let oldTicks: BigInt[] = []
   let tierFeesUSDs: BigDecimal[] = []
 
+  let amount0Distribution = event.params.amountInDistribution
+  let amount1Distribution = event.params.amountOutDistribution
+  if (amount0.lt(ZERO_BD) || amount1.gt(ZERO_BD)) {
+    amount0Distribution = event.params.amountOutDistribution
+    amount1Distribution = event.params.amountInDistribution
+  }
+
   // Loop each tier
   for (let i = 0; i < event.params.tierData.length; i++) {
-    let amountDistribution = extractAmountDistributionAtIndex(event.params.amountInDistribution, i)
+    let amountInPercent = extractAmountDistributionAtIndex(event.params.amountInDistribution, i)
+    let amount0Percent = extractAmountDistributionAtIndex(amount0Distribution, i)
+    let amount1Percent = extractAmountDistributionAtIndex(amount1Distribution, i)
+
     let tier = Tier.load(getTierId(pool.id, i))!
     oldTicks.push(tier.tick!)
 
@@ -619,28 +630,29 @@ export function handleSwap(event: SwapEvent): void {
       let tierLiquidity = tierData[0]
       let tierSqrtPrice = tierData[1]
 
+      // TODO: fees should be calculated using input amount solely
       let tierFeesETH = amountTotalETHTracked
-        .times(amountDistribution)
+        .times(amountInPercent)
         .times(tier.feeTier.toBigDecimal())
         .div(BigDecimal.fromString('100000'))
       let tierFeesUSD = amountTotalUSDTracked
-        .times(amountDistribution)
+        .times(amountInPercent)
         .times(tier.feeTier.toBigDecimal())
         .div(BigDecimal.fromString('100000'))
 
       // tier volume
-      tier.volumeToken0 = tier.volumeToken0.plus(amount0Abs.times(amountDistribution))
-      tier.volumeToken1 = tier.volumeToken1.plus(amount1Abs.times(amountDistribution))
-      tier.volumeUSD = tier.volumeUSD.plus(amountTotalUSDTracked.times(amountDistribution))
-      tier.untrackedVolumeUSD = tier.untrackedVolumeUSD.plus(amountTotalUSDUntracked.times(amountDistribution))
+      tier.volumeToken0 = tier.volumeToken0.plus(amount0Abs.times(amount0Percent))
+      tier.volumeToken1 = tier.volumeToken1.plus(amount1Abs.times(amount1Percent))
+      tier.volumeUSD = tier.volumeUSD.plus(amountTotalUSDTracked.times(amountInPercent)) // NOTE: imprecisely estimate with amountInPercent
+      tier.untrackedVolumeUSD = tier.untrackedVolumeUSD.plus(amountTotalUSDUntracked.times(amountInPercent)) // NOTE: imprecisely estimate with amountInPercent
       tier.feesUSD = tier.feesUSD.plus(tierFeesUSD)
       tier.txCount = tier.txCount.plus(ONE_BI)
 
       // Update the pool tier with the new active liquidity, price.
       tier.liquidity = tierLiquidity
       tier.sqrtPrice = tierSqrtPrice
-      tier.totalValueLockedToken0 = tier.totalValueLockedToken0.plus(amount0.times(amountDistribution))
-      tier.totalValueLockedToken1 = tier.totalValueLockedToken1.plus(amount1.times(amountDistribution))
+      tier.totalValueLockedToken0 = tier.totalValueLockedToken0.plus(amount0.times(amount0Percent))
+      tier.totalValueLockedToken1 = tier.totalValueLockedToken1.plus(amount1.times(amount1Percent))
 
       // updated pool tier ratess
       let prices = sqrtPriceX72ToTokenPrices(tierSqrtPrice, token0, token1)
@@ -764,8 +776,12 @@ export function handleSwap(event: SwapEvent): void {
     }
 
     let swapTierData = new SwapTierData(swap.id + '#' + i.toString())
-    let amountDistribution = extractAmountDistributionAtIndex(event.params.amountInDistribution, i)
     let tier = tiers[i]
+
+    let amountInPercent = extractAmountDistributionAtIndex(event.params.amountInDistribution, i)
+    let amountOutPercent = extractAmountDistributionAtIndex(event.params.amountOutDistribution, i)
+    let amount0Percent = extractAmountDistributionAtIndex(amount0Distribution, i)
+    let amount1Percent = extractAmountDistributionAtIndex(amount1Distribution, i)
 
     swapTierData.transaction = transaction.id
     swapTierData.timestamp = transaction.timestamp
@@ -779,10 +795,11 @@ export function handleSwap(event: SwapEvent): void {
     swapTierData.senderAccRefId = event.params.senderAccRefId
     swapTierData.recipient = event.params.recipient
     swapTierData.recipientAccRefId = event.params.recipientAccRefId
-    swapTierData.amountDistribution = amountDistribution
-    swapTierData.amount0 = amount0.times(amountDistribution)
-    swapTierData.amount1 = amount1.times(amountDistribution)
-    swapTierData.amountUSD = amountTotalUSDTracked.times(amountDistribution)
+    swapTierData.amountInPercent = amountInPercent
+    swapTierData.amountOutPercent = amountOutPercent
+    swapTierData.amount0 = amount0.times(amount0Percent)
+    swapTierData.amount1 = amount1.times(amount1Percent)
+    swapTierData.amountUSD = amountTotalUSDTracked.times(amountInPercent) // NOTE: imprecisely estimate with amountInPercent
     swapTierData.sqrtPriceX72 = tier.sqrtPrice
     swapTierData.logIndex = event.logIndex
 
@@ -790,8 +807,8 @@ export function handleSwap(event: SwapEvent): void {
 
     let tierDayData = updateTierDayData(tier, event)
     let tierHourData = updateTierHourData(tier, event)
-    let tierAmount0Abs = amount0Abs.times(amountDistribution)
-    let tierAmount1Abs = amount1Abs.times(amountDistribution)
+    let tierAmount0Abs = amount0Abs.times(amount0Percent)
+    let tierAmount1Abs = amount1Abs.times(amount1Percent)
 
     tierDayData.volumeUSD = tierDayData.volumeUSD.plus(swapTierData.amountUSD)
     tierDayData.volumeToken0 = tierDayData.volumeToken0.plus(tierAmount0Abs)

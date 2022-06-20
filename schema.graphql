@@ -567,8 +567,10 @@ type SwapTierData @entity {
   amount1: BigDecimal!
   # derived info
   amountUSD: BigDecimal!
-  # The amount distribution in percent among the swap, as a UQ1.41
-  amountDistribution: BigDecimal!
+  # The input amount distribution in percent among the swap, as a UQ1.41
+  amountInPercent: BigDecimal!
+  # The output amount distribution in percent among the swap, as a UQ1.41
+  amountOutPercent: BigDecimal!
   # The sqrt(price) of the pool after the swap, as a UQ56.72
   sqrtPriceX72: BigInt!
   # the tick after the swap
