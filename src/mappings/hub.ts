@@ -630,7 +630,7 @@ export function handleSwap(event: SwapEvent): void {
       let tierLiquidity = tierData[0]
       let tierSqrtPrice = tierData[1]
 
-      // TODO: fees should be calculated using input amount solely
+      // imprecise estimation of fees value in eth or usd
       let tierFeesETH = amountTotalETHTracked
         .times(amountInPercent)
         .times(tier.feeTier.toBigDecimal())
@@ -643,8 +643,8 @@ export function handleSwap(event: SwapEvent): void {
       // tier volume
       tier.volumeToken0 = tier.volumeToken0.plus(amount0Abs.times(amount0Percent))
       tier.volumeToken1 = tier.volumeToken1.plus(amount1Abs.times(amount1Percent))
-      tier.volumeUSD = tier.volumeUSD.plus(amountTotalUSDTracked.times(amountInPercent)) // NOTE: imprecisely estimate with amountInPercent
-      tier.untrackedVolumeUSD = tier.untrackedVolumeUSD.plus(amountTotalUSDUntracked.times(amountInPercent)) // NOTE: imprecisely estimate with amountInPercent
+      tier.volumeUSD = tier.volumeUSD.plus(amountTotalUSDTracked.times(amountInPercent)) // imprecisely estimate with amountInPercent
+      tier.untrackedVolumeUSD = tier.untrackedVolumeUSD.plus(amountTotalUSDUntracked.times(amountInPercent)) // imprecisely estimate with amountInPercent
       tier.feesUSD = tier.feesUSD.plus(tierFeesUSD)
       tier.txCount = tier.txCount.plus(ONE_BI)
 
