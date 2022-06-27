@@ -1,6 +1,6 @@
 import { BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
 import { Bundle, Hub, Transaction } from '../types/schema'
-import { BI_18, HUB_ADDRESS, ONE_BD, ONE_BI, ZERO_BD, ZERO_BI } from './constants'
+import { BI_18, HUB_ADDRESS, ONE_BD, ONE_BI, ZERO_BD, ZERO_BI, MAX_TIERS } from './constants'
 
 export function exponentToBigDecimal(decimals: BigInt): BigDecimal {
   let bd = BigDecimal.fromString('1')
@@ -92,7 +92,8 @@ export function sliceBits(bitmap: BigInt, startPos: u8, len: u8): BigInt {
 }
 
 export function extractAmountDistributionAtIndex(distribution: BigInt, index: i32): BigDecimal {
-  return sliceBits(distribution, (index as u8) * 42, 42).divDecimal(ONE_BI.leftShift(41).toBigDecimal())
+  const bits = BigInt.fromI32(256).div(BigInt.fromI32(MAX_TIERS)).toI32() as u8
+  return sliceBits(distribution, (index as u8) * bits, bits).divDecimal(ONE_BI.leftShift(bits - 1).toBigDecimal())
 }
 
 export function decodeTierData(tierData: BigInt): Array<BigInt> {
