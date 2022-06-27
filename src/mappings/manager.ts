@@ -3,7 +3,7 @@ import { Burn, Mint, SetLimitOrderType } from '../types/Hub/Hub'
 import { Transfer } from '../types/Manager/Manager'
 import { Bundle, Token } from '../types/schema'
 import { convertTokenToDecimal, decodeLiquidityD8 } from '../utils'
-import { MANAGER_ADDRESS } from '../utils/constants'
+import { MANAGER_ADDRESS, ZERO_BI } from '../utils/constants'
 import { getPosition, savePositionSnapshot, updateFeeVars } from '../utils/position'
 
 function isFromManager(owner: Address): boolean {
@@ -85,6 +85,12 @@ export function handleDecreaseLiquidity(event: Burn): void {
     .times(token0.derivedETH.times(bundle.ethPriceUSD))
     .plus(feeAmount1.times(token1.derivedETH.times(bundle.ethPriceUSD)))
   position.amountCollectedUSD = position.amountCollectedUSD.plus(newCollectUSD)
+
+  // position reset to normal type if it's emptied
+  if (position.limitOrderType != 0 && position.liquidity.equals(ZERO_BI)) {
+    position.limitOrderType = 0
+    position.settlementSnapshotId = ZERO_BI
+  }
 
   updateFeeVars(position, event, event.params.positionRefId)
   position.save()
