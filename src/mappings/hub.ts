@@ -238,7 +238,7 @@ export function handleUpdateTier(event: UpdateTier): void {
   let prices = sqrtPriceX72ToTokenPrices(sqrtPrice, token0, token1)
   tier.sqrtPrice = sqrtPrice
   tier.token0Price = prices[0] // i.e. token0's price denominated in token1
-  tier.token1Price = prices[1] // i.e. token1's price denominated in token1
+  tier.token1Price = prices[1] // i.e. token1's price denominated in token0
 
   tier.tick = BigInt.fromI32(onChainTier.tick)
   tier.nextTickAbove = BigInt.fromI32(onChainTier.nextTickAbove)
