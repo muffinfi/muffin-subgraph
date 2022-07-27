@@ -16,13 +16,15 @@
     "build:hardhat": "yarn prepare:hardhat && yarn build",
     "create:hardhat": "graph create --node http://localhost:8020/ virtues-milkier/muffin-rinkeby",
     "remove:hardhat": "graph remove --node http://localhost:8020/ virtues-milkier/muffin-rinkeby",
-    "deploy:hardhat": "yarn prepare:hardhat && graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 virtues-milkier/muffin-rinkeby"
+    "deploy:hardhat": "yarn prepare:hardhat && graph deploy --node http://localhost:8020/ --ipfs http://localhost:5001 virtues-milkier/muffin-rinkeby",
+    "update-abis": "ts-node --dir ./scripts update-abis.ts"
   },
   "dependencies": {
     "@graphprotocol/graph-ts": "0.26.0"
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.29.0",
+    "@muffinfi/muffin-contracts": "^1.0.9",
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "eslint": "^8.14.0",

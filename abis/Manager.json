@@ -179,7 +179,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct PositionManager.AddLiquidityParams",
+        "internalType": "struct IPositionManager.AddLiquidityParams",
         "name": "params",
         "type": "tuple"
       }
@@ -342,29 +342,6 @@
     "name": "deposit",
     "outputs": [],
     "stateMutability": "payable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "token",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "depositCallback",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -561,7 +538,7 @@
       },
       {
         "internalType": "address",
-        "name": "",
+        "name": "tokenOut",
         "type": "address"
       },
       {
@@ -571,7 +548,7 @@
       },
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "amountOut",
         "type": "uint256"
       },
       {
@@ -757,19 +734,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "latestTokenId",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "tokenId",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "components": [
@@ -829,7 +793,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct PositionManager.MintParams",
+        "internalType": "struct IPositionManager.MintParams",
         "name": "params",
         "type": "tuple"
       }
@@ -864,6 +828,29 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "muffinDepositCallback",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "token0",
         "type": "address"
       },
@@ -888,7 +875,40 @@
         "type": "bytes"
       }
     ],
-    "name": "mintCallback",
+    "name": "muffinMintCallback",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "tokenIn",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "amountIn",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      },
+      {
+        "internalType": "bytes",
+        "name": "data",
+        "type": "bytes"
+      }
+    ],
+    "name": "muffinSwapCallback",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -1130,7 +1150,7 @@
             "type": "bool"
           }
         ],
-        "internalType": "struct PositionManager.RemoveLiquidityParams",
+        "internalType": "struct IPositionManager.RemoveLiquidityParams",
         "name": "params",
         "type": "tuple"
       }
@@ -1367,39 +1387,6 @@
       }
     ],
     "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "tokenIn",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      },
-      {
-        "internalType": "uint256",
-        "name": "amountIn",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "data",
-        "type": "bytes"
-      }
-    ],
-    "name": "swapCallback",
-    "outputs": [],
-    "stateMutability": "nonpayable",
     "type": "function"
   },
   {

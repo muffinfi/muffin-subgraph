@@ -893,9 +893,9 @@
     "name": "getLimitOrderTickSpacingMultipliers",
     "outputs": [
       {
-        "internalType": "uint8[6]",
+        "internalType": "uint8[]",
         "name": "",
-        "type": "uint8[6]"
+        "type": "uint8[]"
       }
     ],
     "stateMutability": "view",
@@ -1157,6 +1157,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "maxNumOfTiers",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "pure",
     "type": "function"
   },
   {
