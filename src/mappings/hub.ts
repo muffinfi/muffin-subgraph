@@ -268,7 +268,7 @@ export function handleUpdateTier(event: UpdateTier): void {
 
 export function handleMint(event: MintEvent): void {
   let bundle = Bundle.load('1')!
-  let engine = Hub.load(HUB_ADDRESS)!
+  let hub = Hub.load(HUB_ADDRESS)!
   let pool = Pool.load(event.params.poolId.toHexString())!
   let tier = Tier.load(getTierId(pool.id, event.params.tierId))!
 
@@ -283,7 +283,7 @@ export function handleMint(event: MintEvent): void {
     .plus(amount1.times(token1.derivedETH.times(bundle.ethPriceUSD)))
 
   // reset tvl aggregates until new amounts calculated
-  engine.totalValueLockedETH = engine.totalValueLockedETH.minus(pool.totalValueLockedETH)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
   pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
   pool.liquidity = pool.liquidity.minus(tier.liquidity)
   pool.totalValueLockedToken0 = pool.totalValueLockedToken0.minus(tier.totalValueLockedToken0)
@@ -291,7 +291,7 @@ export function handleMint(event: MintEvent): void {
   pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
 
   // update globals
-  engine.txCount = engine.txCount.plus(ONE_BI)
+  hub.txCount = hub.txCount.plus(ONE_BI)
 
   // update token0 data
   token0.txCount = token0.txCount.plus(ONE_BI)
@@ -332,8 +332,8 @@ export function handleMint(event: MintEvent): void {
   pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(tier.totalValueLockedToken1)
   pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
-  engine.totalValueLockedETH = engine.totalValueLockedETH.plus(pool.totalValueLockedETH)
-  engine.totalValueLockedUSD = engine.totalValueLockedETH.times(bundle.ethPriceUSD)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
+  hub.totalValueLockedUSD = hub.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   let transaction = loadTransaction(event)
   let mint = new Mint(transaction.id + '#' + pool.txCount.toString())
@@ -397,7 +397,7 @@ export function handleMint(event: MintEvent): void {
   token1.save()
   pool.save()
   tier.save()
-  engine.save()
+  hub.save()
   mint.save()
 
   // Update inner tick vars and save the ticks
@@ -421,7 +421,7 @@ export function handleBurn(event: BurnEvent): void {
   let bundle = Bundle.load('1')!
   let pool = Pool.load(event.params.poolId.toHexString())!
   let tier = Tier.load(getTierId(pool.id, event.params.tierId))!
-  let engine = Hub.load(HUB_ADDRESS)!
+  let hub = Hub.load(HUB_ADDRESS)!
 
   let token0 = Token.load(pool.token0) as Token
   let token1 = Token.load(pool.token1) as Token
@@ -436,7 +436,7 @@ export function handleBurn(event: BurnEvent): void {
     .plus(amount1.times(token1.derivedETH.times(bundle.ethPriceUSD)))
 
   // reset tvl aggregates until new amounts calculated
-  engine.totalValueLockedETH = engine.totalValueLockedETH.minus(pool.totalValueLockedETH)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
   pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
   pool.liquidity = pool.liquidity.minus(tier.liquidity)
   pool.totalValueLockedToken0 = pool.totalValueLockedToken0.minus(tier.totalValueLockedToken0)
@@ -444,7 +444,7 @@ export function handleBurn(event: BurnEvent): void {
   pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
 
   // update globals
-  engine.txCount = engine.txCount.plus(ONE_BI)
+  hub.txCount = hub.txCount.plus(ONE_BI)
 
   // update token0 data
   token0.txCount = token0.txCount.plus(ONE_BI)
@@ -484,8 +484,8 @@ export function handleBurn(event: BurnEvent): void {
   pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(tier.totalValueLockedToken1)
   pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
-  engine.totalValueLockedETH = engine.totalValueLockedETH.plus(pool.totalValueLockedETH)
-  engine.totalValueLockedUSD = engine.totalValueLockedETH.times(bundle.ethPriceUSD)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
+  hub.totalValueLockedUSD = hub.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   // burn entity
   let transaction = loadTransaction(event)
@@ -536,7 +536,7 @@ export function handleBurn(event: BurnEvent): void {
   token0.save()
   token1.save()
   pool.save()
-  engine.save()
+  hub.save()
   burn.save()
 
   // Burn event also serve as liquidity decreased/fee collected in a position NFT
@@ -554,7 +554,7 @@ export function handleBurn(event: BurnEvent): void {
 
 export function handleSwap(event: SwapEvent): void {
   let bundle = Bundle.load('1')!
-  let engine = Hub.load(HUB_ADDRESS)!
+  let hub = Hub.load(HUB_ADDRESS)!
   let pool = Pool.load(event.params.poolId.toHexString())!
 
   let token0 = Token.load(pool.token0) as Token
@@ -654,12 +654,12 @@ export function handleSwap(event: SwapEvent): void {
   }
 
   // global updates
-  engine.txCount = engine.txCount.plus(ONE_BI)
-  engine.totalVolumeETH = engine.totalVolumeETH.plus(amountTotalETHTracked)
-  engine.totalVolumeUSD = engine.totalVolumeUSD.plus(amountTotalUSDTracked)
-  engine.untrackedVolumeUSD = engine.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
-  engine.totalFeesETH = engine.totalFeesETH.plus(feesETH)
-  engine.totalFeesUSD = engine.totalFeesUSD.plus(feesUSD)
+  hub.txCount = hub.txCount.plus(ONE_BI)
+  hub.totalVolumeETH = hub.totalVolumeETH.plus(amountTotalETHTracked)
+  hub.totalVolumeUSD = hub.totalVolumeUSD.plus(amountTotalUSDTracked)
+  hub.untrackedVolumeUSD = hub.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
+  hub.totalFeesETH = hub.totalFeesETH.plus(feesETH)
+  hub.totalFeesUSD = hub.totalFeesUSD.plus(feesUSD)
 
   // update token0 data
   token0.volume = token0.volume.plus(amount0Abs)
@@ -678,7 +678,7 @@ export function handleSwap(event: SwapEvent): void {
   token1.txCount = token1.txCount.plus(ONE_BI)
 
   // reset aggregate tvl before individual pool tvl updates
-  engine.totalValueLockedETH = engine.totalValueLockedETH.minus(pool.totalValueLockedETH)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
 
   // pool volume
   pool.volumeToken0 = pool.volumeToken0.plus(amount0Abs)
@@ -730,8 +730,8 @@ export function handleSwap(event: SwapEvent): void {
     .plus(pool.totalValueLockedToken1.times(token1.derivedETH))
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
 
-  engine.totalValueLockedETH = engine.totalValueLockedETH.plus(pool.totalValueLockedETH)
-  engine.totalValueLockedUSD = engine.totalValueLockedETH.times(bundle.ethPriceUSD)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
+  hub.totalValueLockedUSD = hub.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH).times(bundle.ethPriceUSD)
   token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH).times(bundle.ethPriceUSD)
@@ -862,7 +862,7 @@ export function handleSwap(event: SwapEvent): void {
   token1DayData.save()
   uniswapDayData.save()
   poolDayData.save()
-  engine.save()
+  hub.save()
   pool.save()
   tiers.forEach(function (tier) {
     tier.save()
