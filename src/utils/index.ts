@@ -130,7 +130,7 @@ export function getOrCreateHub(): Hub {
     hub.totalValueLockedETH = ZERO_BD
     hub.totalValueLockedUSD = ZERO_BD
     hub.txCount = ZERO_BI
-    hub.defaultTickSpacing = 200
+    hub.defaultTickSpacing = 100
     hub.defaultProtocolFee = 0
 
     // create new bundle for tracking eth price
