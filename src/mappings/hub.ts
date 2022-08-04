@@ -44,7 +44,7 @@ import {
   MIN_TICK_IDX,
   updateTickFeeVarsAndSave,
 } from '../utils/tick'
-import { BASE_LIQUIDITY, getTierId } from '../utils/tier'
+import { BASE_LIQUIDITY, getTierId, sqrtGammaToFeeTier } from '../utils/tier'
 import { getOrCreateToken } from '../utils/token'
 import { handleDecreaseLiquidity, handleIncreaseLiquidity } from './manager'
 export { handleSetLimitOrderType } from './manager'
@@ -57,26 +57,22 @@ export function handleUpdateDefaultParameters(event: UpdateDefaultParameters): v
 }
 
 export function handlePoolCreated(event: PoolCreated): void {
-  // load engine
   let hub = getOrCreateHub()
-
   hub.poolCount = hub.poolCount.plus(ONE_BI)
+  hub.save()
 
   let token0 = getOrCreateToken(event.params.token0)
   let token1 = getOrCreateToken(event.params.token1)
   let poolId = event.params.poolId.toHexString()
   let pool = new Pool(poolId)
 
-  // fetch info if null
   if (token0 === null) {
-    // bail if we couldn't figure out the decimals
-    log.debug('mybug the decimal on token 0 was null', [])
+    log.debug('token 0 is null', [])
     return
   }
 
   if (token1 === null) {
-    // bail if we couldn't figure out the decimals
-    log.debug('mybug the decimal on token 0 was null', [])
+    log.debug('token 1 is null', [])
     return
   }
 
@@ -91,6 +87,9 @@ export function handlePoolCreated(event: PoolCreated): void {
     newPools.push(pool.id)
     token0.whitelistPools = newPools
   }
+
+  token0.save()
+  token1.save()
 
   pool.token0 = token0.id
   pool.token1 = token1.id
@@ -111,15 +110,10 @@ export function handlePoolCreated(event: PoolCreated): void {
   pool.volumeUSD = ZERO_BD
   pool.feesUSD = ZERO_BD
   pool.untrackedVolumeUSD = ZERO_BD
-
   pool.collectedFeesToken0 = ZERO_BD
   pool.collectedFeesToken1 = ZERO_BD
   pool.collectedFeesUSD = ZERO_BD
-
   pool.save()
-  token0.save()
-  token1.save()
-  hub.save()
 
   let params = hubContract.getPoolParameters(convertPoolIdToBytes(pool.id))
   pool.tickSpacing = params.value0
@@ -139,8 +133,10 @@ export function handleUpdateTier(event: UpdateTier): void {
   let tierId = getTierId(pool.id, event.params.tierId)
   let tier = Tier.load(tierId)
   let isNew = false
+
   if (!tier) {
     isNew = true
+
     tier = new Tier(tierId)
     tier.createdAtTimestamp = event.block.timestamp
     tier.createdAtBlockNumber = event.block.number
@@ -173,16 +169,9 @@ export function handleUpdateTier(event: UpdateTier): void {
     tier.tierId = event.params.tierId
   }
 
+  tier.sqrtGamma = BigInt.fromI32(event.params.sqrtGamma)
+  tier.feeTier = sqrtGammaToFeeTier(event.params.sqrtGamma)
   tier.limitOrderTickSpacingMultiplier = event.params.limitOrderTickSpacingMultiplier
-
-  let sqrtGamma = BigInt.fromI32(event.params.sqrtGamma)
-  tier.sqrtGamma = sqrtGamma
-
-  tier.feeTier = BigInt.fromI64(10 ** 10)
-    .minus(sqrtGamma.times(sqrtGamma))
-    .plus(BigInt.fromI32(10 ** 5 / 2)) // round div
-    .div(BigInt.fromI32(10 ** 5))
-
   tier.save()
 
   if (!isNew) return
@@ -210,7 +199,7 @@ export function handleUpdateTier(event: UpdateTier): void {
   tierIds.push(tier.id)
   pool.tierIds = tierIds
 
-  let engine = Hub.load(HUB_ADDRESS)!
+  let hub = Hub.load(HUB_ADDRESS)!
   let bundle = Bundle.load('1')!
   let token0 = Token.load(pool.token0)!
   let token1 = Token.load(pool.token1)!
@@ -218,13 +207,10 @@ export function handleUpdateTier(event: UpdateTier): void {
   let sqrtPrice = onChainTier.sqrtPrice
 
   let amount0 = convertTokenToDecimal(ceilDiv(BigInt.fromI32(100).leftShift(72 + 8), sqrtPrice), token0.decimals)
-  let amount1 = convertTokenToDecimal(
-    ceilDiv(BigInt.fromI32(100).times(sqrtPrice), ONE_BI.leftShift(72 - 8)),
-    token1.decimals
-  )
+  let amount1 = convertTokenToDecimal(ceilDiv(BigInt.fromI32(100).times(sqrtPrice), ONE_BI.leftShift(72 - 8)), token1.decimals) // prettier-ignore
 
   // reset tvl aggregates until new amounts calculated
-  engine.totalValueLockedETH = engine.totalValueLockedETH.minus(pool.totalValueLockedETH)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
 
   // update token0 data
   token0.totalValueLocked = token0.totalValueLocked.plus(amount0)
@@ -260,8 +246,8 @@ export function handleUpdateTier(event: UpdateTier): void {
   pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(tier.totalValueLockedToken1)
   pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
-  engine.totalValueLockedETH = engine.totalValueLockedETH.plus(pool.totalValueLockedETH)
-  engine.totalValueLockedUSD = engine.totalValueLockedETH.times(bundle.ethPriceUSD)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
+  hub.totalValueLockedUSD = hub.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   updateMuffinDayData(event)
   updatePoolDayData(pool, event)
@@ -277,7 +263,7 @@ export function handleUpdateTier(event: UpdateTier): void {
   token1.save()
   pool.save()
   tier.save()
-  engine.save()
+  hub.save()
 }
 
 export function handleMint(event: MintEvent): void {
