@@ -7,7 +7,7 @@ export function getTierId(poolId: string, tierId: i32): string {
   return poolId + '#' + tierId.toString()
 }
 
-export function sqrtGammaToFeeTier(sqrtGamma: number): BigInt {
+export function sqrtGammaToFeeTier(sqrtGamma: i32): BigInt {
   let sqrtGammaI32 = BigInt.fromI32(sqrtGamma)
   return BigInt.fromI64(10 ** 10)
     .minus(sqrtGammaI32.times(sqrtGammaI32))
