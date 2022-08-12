@@ -288,7 +288,6 @@ export function handleMint(event: MintEvent): void {
   pool.liquidity = pool.liquidity.minus(tier.liquidity)
   pool.totalValueLockedToken0 = pool.totalValueLockedToken0.minus(tier.totalValueLockedToken0)
   pool.totalValueLockedToken1 = pool.totalValueLockedToken1.minus(tier.totalValueLockedToken1)
-  pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
 
   // update globals
   hub.txCount = hub.txCount.plus(ONE_BI)
@@ -441,7 +440,6 @@ export function handleBurn(event: BurnEvent): void {
   pool.liquidity = pool.liquidity.minus(tier.liquidity)
   pool.totalValueLockedToken0 = pool.totalValueLockedToken0.minus(tier.totalValueLockedToken0)
   pool.totalValueLockedToken1 = pool.totalValueLockedToken1.minus(tier.totalValueLockedToken1)
-  pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
 
   // update globals
   hub.txCount = hub.txCount.plus(ONE_BI)
