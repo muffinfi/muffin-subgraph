@@ -534,6 +534,7 @@ export function handleBurn(event: BurnEvent): void {
   token0.save()
   token1.save()
   pool.save()
+  tier.save()
   hub.save()
   burn.save()
 
