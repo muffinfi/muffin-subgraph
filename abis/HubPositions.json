@@ -926,6 +926,25 @@
         "internalType": "bytes32",
         "name": "poolId",
         "type": "bytes32"
+      }
+    ],
+    "name": "getPoolDefaultTickSpacing",
+    "outputs": [
+      {
+        "internalType": "uint8",
+        "name": "",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "poolId",
+        "type": "bytes32"
       },
       {
         "internalType": "address",
@@ -1349,6 +1368,24 @@
       }
     ],
     "name": "setPoolAllowedSqrtGammas",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "bytes32",
+        "name": "poolId",
+        "type": "bytes32"
+      },
+      {
+        "internalType": "uint8",
+        "name": "tickSpacing",
+        "type": "uint8"
+      }
+    ],
+    "name": "setPoolDefaultTickSpacing",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

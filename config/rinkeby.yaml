@@ -1,8 +1,8 @@
 network: rinkeby
-address: '0xb74842648caa2841e1e20f03d318118343fd4c03'
-startBlock: 11000000
-managerAddress: '0x7069713cdfda0829111eccedcf24c2e3f99cd467'
-managerStartBlock: 11000000
+address: '0x42789c4D6c5Cc9334fef4da662A57D78771Ce9E5'
+startBlock: 11180000
+managerAddress: '0x5e090C58E71B86b94fB544b0143363C3414D0579'
+managerStartBlock: 11180000
 
 MAX_TIERS: 6
 USDC_ADDRESS: '0xc6399e9e8d6d70a2aa1fc6ade21f56567f6c7862'

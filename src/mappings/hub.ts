@@ -98,7 +98,7 @@ export function handlePoolCreated(event: PoolCreated): void {
   pool.liquidityProviderCount = ZERO_BI
   pool.txCount = ZERO_BI
   pool.liquidity = ZERO_BI
-  pool.tickSpacing = hub.defaultTickSpacing
+  pool.tickSpacing = hub.defaultTickSpacing // incorrect if pool has specifc default. however, it'll be updated with eth_call below.
   pool.protocolFee = hub.defaultProtocolFee
   pool.totalValueLockedToken0 = ZERO_BD
   pool.totalValueLockedToken1 = ZERO_BD
