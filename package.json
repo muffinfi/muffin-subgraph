@@ -1,14 +1,14 @@
 {
-  "name": "muffin-rinkeby",
+  "name": "muffin",
   "license": "UNLICENSED",
   "scripts": {
     "js-yaml": "js-yaml",
     "codegen": "graph codegen --output-dir src/types/",
     "build": "graph build",
-    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ dkenw/muffin-rinkeby",
+    "deploy": "graph deploy --node https://api.thegraph.com/deploy/ muffinfi/muffin",
     "prepare:mainnet": "js-yaml config/mainnet.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/mainnet.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:mainnet": "yarn prepare:mainnet && yarn build",
-    "deploy:mainnet": "yarn prepare:mainnet && graph deploy --node https://api.thegraph.com/deploy/ muffin/muffin",
+    "deploy:mainnet": "yarn prepare:mainnet && graph deploy --node https://api.thegraph.com/deploy/ muffinfi/muffin",
     "prepare:rinkeby": "js-yaml config/rinkeby.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/rinkeby.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:rinkeby": "yarn prepare:rinkeby && yarn build",
     "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ dkenw/muffin-rinkeby",
@@ -24,7 +24,7 @@
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.29.0",
-    "@muffinfi/muffin-contracts": "1.0.11",
+    "@muffinfi/muffin-contracts": "1.0.12",
     "@typescript-eslint/eslint-plugin": "^5.21.0",
     "@typescript-eslint/parser": "^5.21.0",
     "eslint": "^8.14.0",
