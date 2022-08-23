@@ -1,5 +1,5 @@
 import { BigDecimal, BigInt, ethereum } from '@graphprotocol/graph-ts'
-import { bigDecimalExponated, decodeLiquidityD8, safeDiv } from '.'
+import { bigDecimalExponated, safeDiv } from '.'
 import { Tick, Tier } from '../types/schema'
 import { hubContract, ONE_BD, ZERO_BD, ZERO_BI } from './constants'
 import { updateTickDayData } from './intervalUpdates'
@@ -57,10 +57,6 @@ export function createTick(tickId: string, tickIdx: i32, poolId: string, tierId:
 export function updateTickFeeVarsAndSave(tick: Tick, event: ethereum.Event): void {
   // not all ticks are initialized so obtaining null is expected behavior
   let tickResult = hubContract.getTick(convertPoolIdToBytes(tick.poolId), tick.tierId, tick.tickIdx)
-  let liquidityLower = decodeLiquidityD8(tickResult.liquidityLowerD8)
-  let liquidityUpper = decodeLiquidityD8(tickResult.liquidityUpperD8)
-  tick.liquidityNet = liquidityLower.minus(liquidityUpper)
-  tick.liquidityGross = liquidityLower.abs().plus(liquidityUpper.abs())
   tick.feeGrowthOutside0X64 = tickResult.feeGrowthOutside0
   tick.feeGrowthOutside1X64 = tickResult.feeGrowthOutside1
   tick.save()
