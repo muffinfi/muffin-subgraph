@@ -11,7 +11,7 @@
     "deploy:mainnet": "yarn prepare:mainnet && graph deploy --node https://api.thegraph.com/deploy/ muffinfi/muffin-mainnet",
     "prepare:rinkeby": "js-yaml config/rinkeby.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/rinkeby.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:rinkeby": "yarn prepare:rinkeby && yarn build",
-    "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ dkenw/muffin-rinkeby",
+    "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ virtues-milkier/muffin-rinkeby",
     "prepare:hardhat": "js-yaml config/hardhat.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/hardhat.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:hardhat": "yarn prepare:hardhat && yarn build",
     "create:hardhat": "graph create --node http://localhost:8020/ dkenw/muffin-rinkeby",
@@ -20,20 +20,20 @@
     "update-abis": "ts-node --dir ./scripts update-abis.ts"
   },
   "dependencies": {
-    "@graphprotocol/graph-ts": "0.26.0"
+    "@graphprotocol/graph-ts": "0.27.0"
   },
   "devDependencies": {
-    "@graphprotocol/graph-cli": "^0.29.0",
+    "@graphprotocol/graph-cli": "^0.33.0",
     "@muffinfi/muffin-contracts": "1.0.12",
-    "@typescript-eslint/eslint-plugin": "^5.21.0",
-    "@typescript-eslint/parser": "^5.21.0",
-    "eslint": "^8.14.0",
+    "@typescript-eslint/eslint-plugin": "^5.35.1",
+    "@typescript-eslint/parser": "^5.35.1",
+    "eslint": "^8.22.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-prettier": "^4.0.0",
+    "eslint-plugin-prettier": "^4.2.1",
     "js-yaml": "^4.1.0",
     "mustache": "^4.2.0",
-    "prettier": "^2.6.2",
+    "prettier": "^2.7.1",
     "source-map-support": "^0.5.21",
-    "typescript": "^4.6.3"
+    "typescript": "^4.7.4"
   }
 }

@@ -85,7 +85,7 @@ export function findEthPerToken(token: Token): BigDecimal {
           // whitelist token is token1
           let token1 = Token.load(tier.token1)!
           // get the derived ETH in pool tier
-          let ethLocked = tier.totalValueLockedToken1.times(token1.derivedETH)
+          let ethLocked = tier.amount1.times(token1.derivedETH)
 
           if (ethLocked.gt(largestEthLocked) && ethLocked.gt(MINIMUM_ETH_LOCKED)) {
             largestEthLocked = ethLocked
@@ -97,7 +97,7 @@ export function findEthPerToken(token: Token): BigDecimal {
         if (tier.token1 == token.id) {
           let token0 = Token.load(tier.token0)!
           // get the derived ETH in pool tier
-          let ethLocked = tier.totalValueLockedToken0.times(token0.derivedETH)
+          let ethLocked = tier.amount0.times(token0.derivedETH)
 
           if (ethLocked.gt(largestEthLocked) && ethLocked.gt(MINIMUM_ETH_LOCKED)) {
             largestEthLocked = ethLocked

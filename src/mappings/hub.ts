@@ -1,17 +1,18 @@
 import { BigDecimal, BigInt, log } from '@graphprotocol/graph-ts'
 import {
   Burn as BurnEvent,
-  CollectSettled,
+  CollectSettled as CollectSettledEvent,
   Deposit,
   Mint as MintEvent,
   PoolCreated,
+  SetLimitOrderType,
   Swap as SwapEvent,
   UpdateDefaultParameters,
   UpdatePool,
   UpdateTier,
   Withdraw,
 } from '../types/Hub/Hub'
-import { Bundle, Burn, Hub, Mint, Pool, Swap, SwapTierData, Tick, Tier, Token } from '../types/schema'
+import { Bundle, Burn, CollectSettled, Hub, Mint, Pool, Swap, SwapTierData, Tick, Tier, Token } from '../types/schema'
 import {
   ceilDiv,
   convertTokenToDecimal,
@@ -33,6 +34,7 @@ import {
   updateTokenDayData,
   updateTokenHourData,
 } from '../utils/intervalUpdates'
+import { MAX_TICK_IDX, MIN_TICK_IDX } from '../utils/math'
 import { convertPoolIdToBytes } from '../utils/pool'
 import { findEthPerToken, getEthPriceInUSD, getTrackedAmountUSD, sqrtPriceX72ToTokenPrices } from '../utils/pricing'
 import {
@@ -40,14 +42,15 @@ import {
   getTickId,
   getTickIdWithTierEntityId,
   loadTickUpdateFeeVarsAndSave,
-  MAX_TICK_IDX,
-  MIN_TICK_IDX,
   updateTickFeeVarsAndSave,
 } from '../utils/tick'
 import { BASE_LIQUIDITY, getTierId, sqrtGammaToFeeTier } from '../utils/tier'
 import { getOrCreateToken } from '../utils/token'
-import { handleDecreaseLiquidity, handleIncreaseLiquidity } from './manager'
-export { handleSetLimitOrderType } from './manager'
+import {
+  handleDecreaseLiquidity,
+  handleIncreaseLiquidity,
+  handleSetLimitOrderType as handleManagerSetLimitOrderType,
+} from './manager'
 
 export function handleUpdateDefaultParameters(event: UpdateDefaultParameters): void {
   let hub = getOrCreateHub()
@@ -100,8 +103,8 @@ export function handlePoolCreated(event: PoolCreated): void {
   pool.liquidity = ZERO_BI
   pool.tickSpacing = hub.defaultTickSpacing // incorrect if pool has specifc default. however, it'll be updated with eth_call below.
   pool.protocolFee = hub.defaultProtocolFee
-  pool.totalValueLockedToken0 = ZERO_BD
-  pool.totalValueLockedToken1 = ZERO_BD
+  pool.amount0 = ZERO_BD
+  pool.amount1 = ZERO_BD
   pool.totalValueLockedUSD = ZERO_BD
   pool.totalValueLockedETH = ZERO_BD
   pool.totalValueLockedUSDUntracked = ZERO_BD
@@ -113,7 +116,7 @@ export function handlePoolCreated(event: PoolCreated): void {
   pool.collectedFeesToken0 = ZERO_BD
   pool.collectedFeesToken1 = ZERO_BD
   pool.collectedFeesUSD = ZERO_BD
-  pool.save()
+  pool.tierIds = []
 
   let params = hubContract.getPoolParameters(convertPoolIdToBytes(pool.id))
   pool.tickSpacing = params.value0
@@ -145,14 +148,16 @@ export function handleUpdateTier(event: UpdateTier): void {
     tier.token0 = pool.token0
     tier.token1 = pool.token1
 
+    tier.token0Price = ZERO_BD
+    tier.token1Price = ZERO_BD
     tier.liquidityProviderCount = ZERO_BI
     tier.txCount = ZERO_BI
     tier.liquidity = BASE_LIQUIDITY
     tier.sqrtPrice = ZERO_BI
     tier.feeGrowthGlobal0X64 = ZERO_BI
     tier.feeGrowthGlobal1X64 = ZERO_BI
-    tier.totalValueLockedToken0 = ZERO_BD
-    tier.totalValueLockedToken1 = ZERO_BD
+    tier.amount0 = ZERO_BD
+    tier.amount1 = ZERO_BD
     tier.totalValueLockedUSD = ZERO_BD
     tier.totalValueLockedETH = ZERO_BD
     tier.totalValueLockedUSDUntracked = ZERO_BD
@@ -162,6 +167,9 @@ export function handleUpdateTier(event: UpdateTier): void {
     tier.feesUSD = ZERO_BD
     tier.untrackedVolumeUSD = ZERO_BD
     tier.limitOrderTickSpacingMultiplier = 0
+    tier.tick = 0
+    tier.nextTickAbove = MAX_TICK_IDX
+    tier.nextTickBelow = MIN_TICK_IDX
 
     tier.collectedFeesToken0 = ZERO_BD
     tier.collectedFeesToken1 = ZERO_BD
@@ -169,7 +177,7 @@ export function handleUpdateTier(event: UpdateTier): void {
     tier.tierId = event.params.tierId
   }
 
-  tier.sqrtGamma = BigInt.fromI32(event.params.sqrtGamma)
+  tier.sqrtGamma = event.params.sqrtGamma
   tier.feeTier = sqrtGammaToFeeTier(event.params.sqrtGamma)
   tier.limitOrderTickSpacingMultiplier = event.params.limitOrderTickSpacingMultiplier
   tier.save()
@@ -185,6 +193,8 @@ export function handleUpdateTier(event: UpdateTier): void {
     minTick = createTick(minTickId, MIN_TICK_IDX, pool.id, tier.tierId, event)
     minTick.liquidityNet = BASE_LIQUIDITY
     minTick.liquidityGross = BASE_LIQUIDITY
+    // minTick.nextTickIdxBelow = MIN_TICK_IDX
+    // minTick.nextTickIdxAbove = MAX_TICK_IDX
     minTick.save()
   }
 
@@ -192,6 +202,8 @@ export function handleUpdateTier(event: UpdateTier): void {
     maxTick = createTick(maxTickId, MAX_TICK_IDX, pool.id, tier.tierId, event)
     maxTick.liquidityNet = ZERO_BI.minus(BASE_LIQUIDITY)
     maxTick.liquidityGross = BASE_LIQUIDITY
+    maxTick.nextTickIdxBelow = MIN_TICK_IDX
+    maxTick.nextTickIdxAbove = MAX_TICK_IDX
     maxTick.save()
   }
 
@@ -213,12 +225,12 @@ export function handleUpdateTier(event: UpdateTier): void {
   hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
 
   // update token0 data
-  token0.totalValueLocked = token0.totalValueLocked.plus(amount0)
-  token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
+  token0.amountLocked = token0.amountLocked.plus(amount0)
+  token0.totalValueLockedUSD = token0.amountLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
 
   // update token1 data
-  token1.totalValueLocked = token1.totalValueLocked.plus(amount1)
-  token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
+  token1.amountLocked = token1.amountLocked.plus(amount1)
+  token1.totalValueLockedUSD = token1.amountLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
 
   // init tier
   let prices = sqrtPriceX72ToTokenPrices(sqrtPrice, token0, token1)
@@ -226,24 +238,19 @@ export function handleUpdateTier(event: UpdateTier): void {
   tier.token0Price = prices[0] // i.e. token0's price denominated in token1
   tier.token1Price = prices[1] // i.e. token1's price denominated in token0
 
-  tier.tick = BigInt.fromI32(onChainTier.tick)
-  tier.nextTickAbove = BigInt.fromI32(onChainTier.nextTickAbove)
-  tier.nextTickBelow = BigInt.fromI32(onChainTier.nextTickBelow)
-  tier.liquidity = onChainTier.liquidity
+  tier.tick = onChainTier.tick
   tier.feeGrowthGlobal0X64 = onChainTier.feeGrowthGlobal0
   tier.feeGrowthGlobal1X64 = onChainTier.feeGrowthGlobal1
 
-  tier.totalValueLockedToken0 = tier.totalValueLockedToken0.plus(amount0)
-  tier.totalValueLockedToken1 = tier.totalValueLockedToken1.plus(amount1)
-  tier.totalValueLockedETH = tier.totalValueLockedToken0
-    .times(token0.derivedETH)
-    .plus(tier.totalValueLockedToken1.times(token1.derivedETH))
+  tier.amount0 = tier.amount0.plus(amount0)
+  tier.amount1 = tier.amount1.plus(amount1)
+  tier.totalValueLockedETH = tier.amount0.times(token0.derivedETH).plus(tier.amount1.times(token1.derivedETH))
   tier.totalValueLockedUSD = tier.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   // reset aggregates with new amounts
   pool.liquidity = pool.liquidity.plus(tier.liquidity)
-  pool.totalValueLockedToken0 = pool.totalValueLockedToken0.plus(tier.totalValueLockedToken0)
-  pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(tier.totalValueLockedToken1)
+  pool.amount0 = pool.amount0.plus(tier.amount0)
+  pool.amount1 = pool.amount1.plus(tier.amount1)
   pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
   hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
@@ -286,40 +293,49 @@ export function handleMint(event: MintEvent): void {
   hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
   pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
   pool.liquidity = pool.liquidity.minus(tier.liquidity)
-  pool.totalValueLockedToken0 = pool.totalValueLockedToken0.minus(tier.totalValueLockedToken0)
-  pool.totalValueLockedToken1 = pool.totalValueLockedToken1.minus(tier.totalValueLockedToken1)
+  pool.amount0 = pool.amount0.minus(tier.amount0)
+  pool.amount1 = pool.amount1.minus(tier.amount1)
 
   // update globals
   hub.txCount = hub.txCount.plus(ONE_BI)
 
   // update token0 data
   token0.txCount = token0.txCount.plus(ONE_BI)
-  token0.totalValueLocked = token0.totalValueLocked.plus(amount0)
-  token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
+  token0.amountLocked = token0.amountLocked.plus(amount0)
+  token0.totalValueLockedUSD = token0.amountLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
 
   // update token1 data
   token1.txCount = token1.txCount.plus(ONE_BI)
-  token1.totalValueLocked = token1.totalValueLocked.plus(amount1)
-  token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
+  token1.amountLocked = token1.amountLocked.plus(amount1)
+  token1.totalValueLockedUSD = token1.amountLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
 
   // tier data
   tier.txCount = tier.txCount.plus(ONE_BI)
 
+  // update old ticks' next tick
+  // updateTickNextTickAndSave(tier.id, tier.nextTickAbove.toI32(), event.params.tickLower, event.params.tickUpper, event)
+  // updateTickNextTickAndSave(tier.id, tier.nextTickBelow.toI32(), event.params.tickLower, event.params.tickUpper, event)
+
+  // Update tier's next tick
+  // updateNextTick(tier, event.params.tickLower)
+  // updateNextTick(tier, event.params.tickUpper)
+
   // Pool tiers liquidity tracks the currently active liquidity given pool tiers current tick.
   // We only want to update it on mint if the new position includes the current tick.
-  if (
-    tier.tick !== null &&
-    BigInt.fromI32(event.params.tickLower).le(tier.tick!) &&
-    BigInt.fromI32(event.params.tickUpper).gt(tier.tick!)
-  ) {
-    tier.liquidity = tier.liquidity.plus(liquidity)
-  }
+  // if (BigInt.fromI32(event.params.tickLower).le(tier.tick) && BigInt.fromI32(event.params.tickUpper).gt(tier.tick)) {
+  //   tier.liquidity = tier.liquidity.plus(liquidity)
+  // }
 
-  tier.totalValueLockedToken0 = tier.totalValueLockedToken0.plus(amount0)
-  tier.totalValueLockedToken1 = tier.totalValueLockedToken1.plus(amount1)
-  tier.totalValueLockedETH = tier.totalValueLockedToken0
-    .times(token0.derivedETH)
-    .plus(tier.totalValueLockedToken1.times(token1.derivedETH))
+  // update from chain data
+  let onChainTier = hubContract.getTier(convertPoolIdToBytes(pool.id), tier.tierId)
+  tier.liquidity = onChainTier.liquidity
+  tier.tick = onChainTier.tick
+  tier.nextTickAbove = onChainTier.nextTickAbove
+  tier.nextTickBelow = onChainTier.nextTickBelow
+
+  tier.amount0 = tier.amount0.plus(amount0)
+  tier.amount1 = tier.amount1.plus(amount1)
+  tier.totalValueLockedETH = tier.amount0.times(token0.derivedETH).plus(tier.amount1.times(token1.derivedETH))
   tier.totalValueLockedUSD = tier.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   // pool data
@@ -327,8 +343,8 @@ export function handleMint(event: MintEvent): void {
 
   // reset aggregates with new amounts
   pool.liquidity = pool.liquidity.plus(tier.liquidity)
-  pool.totalValueLockedToken0 = pool.totalValueLockedToken0.plus(tier.totalValueLockedToken0)
-  pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(tier.totalValueLockedToken1)
+  pool.amount0 = pool.amount0.plus(tier.amount0)
+  pool.amount1 = pool.amount1.plus(tier.amount1)
   pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
   hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
@@ -352,8 +368,8 @@ export function handleMint(event: MintEvent): void {
   mint.amount0 = amount0
   mint.amount1 = amount1
   mint.amountUSD = amountUSD
-  mint.tickLower = BigInt.fromI32(event.params.tickLower)
-  mint.tickUpper = BigInt.fromI32(event.params.tickUpper)
+  mint.tickLower = event.params.tickLower
+  mint.tickUpper = event.params.tickUpper
   mint.logIndex = event.logIndex
 
   // tick entities
@@ -438,39 +454,41 @@ export function handleBurn(event: BurnEvent): void {
   hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
   pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
   pool.liquidity = pool.liquidity.minus(tier.liquidity)
-  pool.totalValueLockedToken0 = pool.totalValueLockedToken0.minus(tier.totalValueLockedToken0)
-  pool.totalValueLockedToken1 = pool.totalValueLockedToken1.minus(tier.totalValueLockedToken1)
+  pool.amount0 = pool.amount0.minus(tier.amount0)
+  pool.amount1 = pool.amount1.minus(tier.amount1)
 
   // update globals
   hub.txCount = hub.txCount.plus(ONE_BI)
 
   // update token0 data
   token0.txCount = token0.txCount.plus(ONE_BI)
-  token0.totalValueLocked = token0.totalValueLocked.minus(amount0)
-  token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
+  token0.amountLocked = token0.amountLocked.minus(amount0)
+  token0.totalValueLockedUSD = token0.amountLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
 
   // update token1 data
   token1.txCount = token1.txCount.plus(ONE_BI)
-  token1.totalValueLocked = token1.totalValueLocked.minus(amount1)
-  token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
+  token1.amountLocked = token1.amountLocked.minus(amount1)
+  token1.totalValueLockedUSD = token1.amountLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
 
   // tier data
   tier.txCount = tier.txCount.plus(ONE_BI)
   // Pool tiers liquidity tracks the currently active liquidity given pool tiers current tick.
   // We only want to update it on burn if the position being burnt includes the current tick.
-  if (
-    tier.tick !== null &&
-    BigInt.fromI32(event.params.tickLower).le(tier.tick!) &&
-    BigInt.fromI32(event.params.tickUpper).gt(tier.tick!)
-  ) {
-    tier.liquidity = tier.liquidity.minus(liquidity)
-  }
+  // if (BigInt.fromI32(event.params.tickLower).le(tier.tick) && BigInt.fromI32(event.params.tickUpper).gt(tier.tick)) {
+  //   tier.liquidity = tier.liquidity.minus(liquidity)
+  // }
 
-  tier.totalValueLockedToken0 = tier.totalValueLockedToken0.minus(amount0)
-  tier.totalValueLockedToken1 = tier.totalValueLockedToken1.minus(amount1)
-  tier.totalValueLockedETH = tier.totalValueLockedToken0
-    .times(token0.derivedETH)
-    .plus(tier.totalValueLockedToken1.times(token1.derivedETH))
+  // update from chain data
+  let onChainTier = hubContract.getTier(convertPoolIdToBytes(pool.id), tier.tierId)
+  tier.liquidity = onChainTier.liquidity
+  tier.tick = onChainTier.tick
+  tier.nextTickAbove = onChainTier.nextTickAbove
+  tier.nextTickBelow = onChainTier.nextTickBelow
+
+  // recalculate tier data
+  tier.amount0 = tier.amount0.minus(amount0)
+  tier.amount1 = tier.amount1.minus(amount1)
+  tier.totalValueLockedETH = tier.amount0.times(token0.derivedETH).plus(tier.amount1.times(token1.derivedETH))
   tier.totalValueLockedUSD = tier.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   // pool data
@@ -478,8 +496,8 @@ export function handleBurn(event: BurnEvent): void {
 
   // reset aggregates with new amounts
   pool.liquidity = pool.liquidity.plus(tier.liquidity)
-  pool.totalValueLockedToken0 = pool.totalValueLockedToken0.plus(tier.totalValueLockedToken0)
-  pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(tier.totalValueLockedToken1)
+  pool.amount0 = pool.amount0.plus(tier.amount0)
+  pool.amount1 = pool.amount1.plus(tier.amount1)
   pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
   hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
@@ -505,8 +523,8 @@ export function handleBurn(event: BurnEvent): void {
   burn.amount0 = amount0
   burn.amount1 = amount1
   burn.amountUSD = amountUSD
-  burn.tickLower = BigInt.fromI32(event.params.tickLower)
-  burn.tickUpper = BigInt.fromI32(event.params.tickUpper)
+  burn.tickLower = event.params.tickLower
+  burn.tickUpper = event.params.tickUpper
   burn.logIndex = event.logIndex
 
   // tick entities
@@ -518,6 +536,43 @@ export function handleBurn(event: BurnEvent): void {
   lowerTick.liquidityNet = lowerTick.liquidityNet.minus(liquidity)
   upperTick.liquidityGross = upperTick.liquidityGross.minus(liquidity)
   upperTick.liquidityNet = upperTick.liquidityNet.plus(liquidity)
+
+  // let needUnsetLowerTick = lowerTick.liquidityGross.equals(ZERO_BI)
+  // let needUnsetUpperTick = upperTick.liquidityGross.equals(ZERO_BI)
+
+  // // Update tier next tick
+  // if (needUnsetLowerTick) {
+  //   tier.nextTickBelow = lowerTick.nextTickIdxBelow
+
+  //   let nextTickAboveIdx =
+  //     lowerTick.nextTickIdxAbove === upperTick.tickIdx && needUnsetUpperTick
+  //       ? upperTick.nextTickIdxAbove
+  //       : lowerTick.nextTickIdxAbove
+
+  //   let nextTickAbove = Tick.load(getTickIdWithTierEntityId(tier.id, nextTickAboveIdx))!
+  //   nextTickAbove.nextTickIdxBelow = lowerTick.nextTickIdxBelow
+  //   nextTickAbove.save()
+
+  //   let nextTickBelow = Tick.load(getTickIdWithTierEntityId(tier.id, lowerTick.nextTickIdxBelow))!
+  //   nextTickBelow.nextTickIdxAbove = nextTickAboveIdx
+  //   nextTickBelow.save()
+  // }
+
+  // if (needUnsetUpperTick) {
+  //   tier.nextTickAbove = upperTick.nextTickIdxAbove
+
+  //   // skip when lower tick is empty and is chained by upper tick,
+  //   // since the update is done in above code
+  //   if (upperTick.nextTickIdxBelow !== lowerTick.tickIdx || !needUnsetLowerTick) {
+  //     let nextTickAbove = Tick.load(getTickIdWithTierEntityId(tier.id, upperTick.nextTickIdxAbove))!
+  //     nextTickAbove.nextTickIdxBelow = upperTick.nextTickIdxBelow
+  //     nextTickAbove.save()
+
+  //     let nextTickBelow = Tick.load(getTickIdWithTierEntityId(tier.id, upperTick.nextTickIdxBelow))!
+  //     nextTickBelow.nextTickIdxAbove = upperTick.nextTickIdxAbove
+  //     nextTickBelow.save()
+  //   }
+  // }
 
   updateMuffinDayData(event)
   updatePoolDayData(pool, event)
@@ -589,7 +644,9 @@ export function handleSwap(event: SwapEvent): void {
   let feesUSD = ZERO_BD
   let liquidity = ZERO_BI
   let tiers: Tier[] = []
-  let oldTicks: BigInt[] = []
+  let oldTicks: i32[] = []
+  let oldNextTickAboves: i32[] = []
+  let oldNextTickBelows: i32[] = []
   let tierFeesUSDs: BigDecimal[] = []
 
   let amount0Distribution = event.params.amountInDistribution
@@ -606,7 +663,9 @@ export function handleSwap(event: SwapEvent): void {
     let amount1Percent = extractAmountDistributionAtIndex(amount1Distribution, i)
 
     let tier = Tier.load(getTierId(pool.id, i))!
-    oldTicks.push(tier.tick!)
+    oldTicks.push(tier.tick)
+    oldNextTickAboves.push(tier.nextTickAbove)
+    oldNextTickBelows.push(tier.nextTickBelow)
 
     if (event.params.tierData[i].isZero()) {
       tierFeesUSDs.push(BigDecimal.zero())
@@ -618,11 +677,11 @@ export function handleSwap(event: SwapEvent): void {
       // imprecise estimation of fees value in eth or usd
       let tierFeesETH = amountTotalETHTracked
         .times(amountInPercent)
-        .times(tier.feeTier.toBigDecimal())
+        .times(BigInt.fromI32(tier.feeTier).toBigDecimal())
         .div(BigDecimal.fromString('100000'))
       let tierFeesUSD = amountTotalUSDTracked
         .times(amountInPercent)
-        .times(tier.feeTier.toBigDecimal())
+        .times(BigInt.fromI32(tier.feeTier).toBigDecimal())
         .div(BigDecimal.fromString('100000'))
 
       // tier volume
@@ -636,8 +695,8 @@ export function handleSwap(event: SwapEvent): void {
       // Update the pool tier with the new active liquidity, price.
       tier.liquidity = tierLiquidity
       tier.sqrtPrice = tierSqrtPrice
-      tier.totalValueLockedToken0 = tier.totalValueLockedToken0.plus(amount0.times(amount0Percent))
-      tier.totalValueLockedToken1 = tier.totalValueLockedToken1.plus(amount1.times(amount1Percent))
+      tier.amount0 = tier.amount0.plus(amount0.times(amount0Percent))
+      tier.amount1 = tier.amount1.plus(amount1.times(amount1Percent))
 
       // updated pool tier ratess
       let prices = sqrtPriceX72ToTokenPrices(tierSqrtPrice, token0, token1)
@@ -662,7 +721,7 @@ export function handleSwap(event: SwapEvent): void {
 
   // update token0 data
   token0.volume = token0.volume.plus(amount0Abs)
-  token0.totalValueLocked = token0.totalValueLocked.plus(amount0)
+  token0.amountLocked = token0.amountLocked.plus(amount0)
   token0.volumeUSD = token0.volumeUSD.plus(amountTotalUSDTracked)
   token0.untrackedVolumeUSD = token0.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
   token0.feesUSD = token0.feesUSD.plus(feesUSD)
@@ -670,7 +729,7 @@ export function handleSwap(event: SwapEvent): void {
 
   // update token1 data
   token1.volume = token1.volume.plus(amount1Abs)
-  token1.totalValueLocked = token1.totalValueLocked.plus(amount1)
+  token1.amountLocked = token1.amountLocked.plus(amount1)
   token1.volumeUSD = token1.volumeUSD.plus(amountTotalUSDTracked)
   token1.untrackedVolumeUSD = token1.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
   token1.feesUSD = token1.feesUSD.plus(feesUSD)
@@ -689,8 +748,8 @@ export function handleSwap(event: SwapEvent): void {
 
   // Update the pool with the new active liquidity, price, and tick.
   pool.liquidity = liquidity
-  pool.totalValueLockedToken0 = pool.totalValueLockedToken0.plus(amount0)
-  pool.totalValueLockedToken1 = pool.totalValueLockedToken1.plus(amount1)
+  pool.amount0 = pool.amount0.plus(amount0)
+  pool.amount1 = pool.amount1.plus(amount1)
 
   // updated pool and tier
   pool.save()
@@ -712,28 +771,25 @@ export function handleSwap(event: SwapEvent): void {
 
     // update pool tier tick and fee growth
     let onChainTier = hubContract.getTier(convertPoolIdToBytes(pool.id), tier.tierId)
-    tier.tick = BigInt.fromI32(onChainTier.tick)
-    tier.nextTickAbove = BigInt.fromI32(onChainTier.nextTickAbove)
-    tier.nextTickBelow = BigInt.fromI32(onChainTier.nextTickBelow)
+    tier.liquidity = onChainTier.liquidity
+    tier.tick = onChainTier.tick
+    tier.nextTickAbove = onChainTier.nextTickAbove
+    tier.nextTickBelow = onChainTier.nextTickBelow
     tier.feeGrowthGlobal0X64 = onChainTier.feeGrowthGlobal0
     tier.feeGrowthGlobal1X64 = onChainTier.feeGrowthGlobal1
 
-    tier.totalValueLockedETH = tier.totalValueLockedToken0
-      .times(token0.derivedETH)
-      .plus(tier.totalValueLockedToken1.times(token1.derivedETH))
+    tier.totalValueLockedETH = tier.amount0.times(token0.derivedETH).plus(tier.amount1.times(token1.derivedETH))
     tier.totalValueLockedUSD = tier.totalValueLockedETH.times(bundle.ethPriceUSD)
   }
 
-  pool.totalValueLockedETH = pool.totalValueLockedToken0
-    .times(token0.derivedETH)
-    .plus(pool.totalValueLockedToken1.times(token1.derivedETH))
+  pool.totalValueLockedETH = pool.amount0.times(token0.derivedETH).plus(pool.amount1.times(token1.derivedETH))
   pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
 
   hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
   hub.totalValueLockedUSD = hub.totalValueLockedETH.times(bundle.ethPriceUSD)
 
-  token0.totalValueLockedUSD = token0.totalValueLocked.times(token0.derivedETH).times(bundle.ethPriceUSD)
-  token1.totalValueLockedUSD = token1.totalValueLocked.times(token1.derivedETH).times(bundle.ethPriceUSD)
+  token0.totalValueLockedUSD = token0.amountLocked.times(token0.derivedETH).times(bundle.ethPriceUSD)
+  token1.totalValueLockedUSD = token1.amountLocked.times(token1.derivedETH).times(bundle.ethPriceUSD)
 
   // create Swap event
   let transaction = loadTransaction(event)
@@ -773,6 +829,7 @@ export function handleSwap(event: SwapEvent): void {
     swapTierData.pool = pool.id
     swapTierData.tier = tier.id
     swapTierData.swap = swap.id
+    swapTierData.tick = tier.tick
     swapTierData.token0 = pool.token0
     swapTierData.token1 = pool.token1
     swapTierData.sender = event.params.sender
@@ -869,37 +926,68 @@ export function handleSwap(event: SwapEvent): void {
   token0.save()
   token1.save()
 
-  let tickSpacing = BigInt.fromI32(hubContract.getPoolParameters(convertPoolIdToBytes(pool.id)).value0)
+  let tickSpacing = hubContract.getPoolParameters(convertPoolIdToBytes(pool.id)).value0
   // Update inner vars of current or crossed ticks
   for (let i = 0; i < tiers.length; i++) {
     let tier = tiers[i]
     let oldTick = oldTicks[i]
-    let newTick = tier.tick!
-    let modulo = newTick.mod(tickSpacing)
-    if (modulo.equals(ZERO_BI)) {
+    let newTick = tier.tick
+    let modulo = tier.tick % tickSpacing
+    if (modulo === 0) {
       // Current tick is initialized and needs to be updated
-      loadTickUpdateFeeVarsAndSave(tier, newTick.toI32(), event)
+      loadTickUpdateFeeVarsAndSave(tier, newTick, event)
     }
 
-    let numIters = oldTick.minus(newTick).abs().div(tickSpacing)
+    let numIters = abs(oldTick - newTick) / tickSpacing
 
-    if (numIters.gt(BigInt.fromI32(100))) {
+    if (numIters > 100) {
       // In case more than 100 ticks need to be updated ignore the update in
       // order to avoid timeouts. From testing this behavior occurs only upon
       // pool initialization. This should not be a big issue as the ticks get
       // updated later. For early users this error also disappears when calling
       // collect
-    } else if (newTick.gt(oldTick)) {
-      let firstInitialized = oldTick.plus(tickSpacing.minus(modulo))
-      for (let j = firstInitialized; j.le(newTick); j = j.plus(tickSpacing)) {
-        loadTickUpdateFeeVarsAndSave(tier, j.toI32(), event)
+    } else if (newTick > oldTick) {
+      let firstInitialized = oldTick + tickSpacing - modulo
+      for (let j = firstInitialized; j <= newTick; j += tickSpacing) {
+        loadTickUpdateFeeVarsAndSave(tier, j, event)
       }
-    } else if (newTick.lt(oldTick)) {
-      let firstInitialized = oldTick.minus(modulo)
-      for (let j = firstInitialized; j.ge(newTick); j = j.minus(tickSpacing)) {
-        loadTickUpdateFeeVarsAndSave(tier, j.toI32(), event)
+    } else if (newTick < oldTick) {
+      let firstInitialized = oldTick - modulo
+      for (let j = firstInitialized; j >= newTick; j -= tickSpacing) {
+        loadTickUpdateFeeVarsAndSave(tier, j, event)
       }
     }
+
+    // if (oldTick < newTick) {
+    //   // update tick info when one for zero
+    //   let currentTick = oldNextTickAboves[i]
+    //   let endTick = tier.nextTickAbove.toI32()
+    //   while (currentTick < endTick) {
+    //     let onChainTick = fetchChainTick(pool.id, tier.tierId, currentTick)
+    //     let tick = Tick.load(getTickIdWithTierEntityId(tier.id, currentTick))!
+    //     let nextTickAbove = tick.nextTickIdxAbove
+    //     while (nextTickAbove < onChainTick.nextTickIdxAbove) {
+    //       nextTickAbove = unsetTickAndGetNextTick(tier.id, nextTickAbove, ONE_FOR_ZERO, event)
+    //     }
+    //     updateLimitOrderStartTick(tier, tick, ONE_FOR_ZERO, event)
+    //     mergeWithOnChainTickAndSave(tick, onChainTick, event)
+    //     currentTick = tick.nextTickIdxAbove
+    //   }
+    // } else if (oldTick > newTick) {
+    //   // update tick info when zero for one
+    //   let currentTick = oldNextTickBelows[i]
+    //   let endTick = tier.nextTickBelow.toI32()
+    //   while (currentTick > endTick) {
+    //     let onChainTick = fetchChainTick(pool.id, tier.tierId, currentTick)
+    //     let tick = Tick.load(getTickIdWithTierEntityId(tier.id, currentTick))!
+    //     let nextTickBelow = tick.nextTickIdxBelow
+    //     while (nextTickBelow < onChainTick.nextTickIdxBelow) {
+    //       nextTickBelow = unsetTickAndGetNextTick(tier.id, nextTickBelow, ZERO_FOR_ONE, event)
+    //     }
+    //     updateLimitOrderStartTick(tier, tick, ZERO_FOR_ONE, event)
+    //     mergeWithOnChainTickAndSave(tick, onChainTick, event)
+    //     currentTick = tick.nextTickIdxBelow
+    //   }
   }
 
   // Update internal account balance
@@ -914,12 +1002,101 @@ export function handleSwap(event: SwapEvent): void {
   }
 }
 
-export function handleCollectSettled(event: CollectSettled): void {
-  handleDecreaseLiquidity(changetype<BurnEvent>(event))
-
+export function handleCollectSettled(event: CollectSettledEvent): void {
   let pool = Pool.load(event.params.poolId.toHexString())!
   let token0 = Token.load(pool.token0)!
   let token1 = Token.load(pool.token1)!
+  let tier = Tier.load(getTierId(pool.id, event.params.tierId))!
+  let hub = getOrCreateHub()
+  let bundle = Bundle.load('1')!
+
+  let amount0 = convertTokenToDecimal(event.params.amount0, token0.decimals)
+  let amount1 = convertTokenToDecimal(event.params.amount1, token1.decimals)
+
+  // reset tvl aggregates until new amounts calculated
+  hub.totalValueLockedETH = hub.totalValueLockedETH.minus(pool.totalValueLockedETH)
+  pool.totalValueLockedETH = pool.totalValueLockedETH.minus(tier.totalValueLockedETH)
+  pool.amount0 = pool.amount0.minus(tier.amount0)
+  pool.amount1 = pool.amount1.minus(tier.amount1)
+
+  // update globals
+  hub.txCount = hub.txCount.plus(ONE_BI)
+
+  // update token0 data
+  token0.txCount = token0.txCount.plus(ONE_BI)
+  token0.amountLocked = token0.amountLocked.minus(amount0)
+  token0.totalValueLockedUSD = token0.amountLocked.times(token0.derivedETH.times(bundle.ethPriceUSD))
+
+  // update token1 data
+  token1.txCount = token1.txCount.plus(ONE_BI)
+  token1.amountLocked = token1.amountLocked.minus(amount1)
+  token1.totalValueLockedUSD = token1.amountLocked.times(token1.derivedETH.times(bundle.ethPriceUSD))
+
+  // tier data
+  tier.txCount = tier.txCount.plus(ONE_BI)
+  tier.amount0 = tier.amount0.minus(amount0)
+  tier.amount1 = tier.amount1.minus(amount1)
+  tier.totalValueLockedETH = tier.amount0.times(token0.derivedETH).plus(tier.amount1.times(token1.derivedETH))
+  tier.totalValueLockedUSD = tier.totalValueLockedETH.times(bundle.ethPriceUSD)
+
+  // pool data
+  pool.txCount = pool.txCount.plus(ONE_BI)
+
+  // reset aggregates with new amounts
+  pool.amount0 = pool.amount0.plus(tier.amount0)
+  pool.amount1 = pool.amount1.plus(tier.amount1)
+  pool.totalValueLockedETH = pool.totalValueLockedETH.plus(tier.totalValueLockedETH)
+  pool.totalValueLockedUSD = pool.totalValueLockedETH.times(bundle.ethPriceUSD)
+  hub.totalValueLockedETH = hub.totalValueLockedETH.plus(pool.totalValueLockedETH)
+  hub.totalValueLockedUSD = hub.totalValueLockedETH.times(bundle.ethPriceUSD)
+
+  // create transaction
+  let transaction = loadTransaction(event)
+  let collectSettled = new CollectSettled(transaction.id + '#' + pool.txCount.toString())
+  collectSettled.transaction = transaction.id
+  collectSettled.timestamp = transaction.timestamp
+  collectSettled.pool = pool.id
+  collectSettled.tier = tier.id
+  collectSettled.token0 = pool.token0
+  collectSettled.token1 = pool.token1
+  collectSettled.owner = event.params.owner
+  collectSettled.ownerAccRefId = event.params.ownerAccRefId
+  collectSettled.positionRefId = event.params.positionRefId
+  collectSettled.origin = event.transaction.from
+  collectSettled.amount = decodeLiquidityD8(event.params.liquidityD8)
+  collectSettled.liquidityD8 = event.params.liquidityD8
+  collectSettled.feeAmount0 = convertTokenToDecimal(event.params.feeAmount0, token0.decimals)
+  collectSettled.feeAmount1 = convertTokenToDecimal(event.params.feeAmount1, token1.decimals)
+  collectSettled.amount0 = amount0
+  collectSettled.amount1 = amount1
+  collectSettled.amountUSD = amount0
+    .times(token0.derivedETH.times(bundle.ethPriceUSD))
+    .plus(amount1.times(token1.derivedETH.times(bundle.ethPriceUSD)))
+  collectSettled.tickLower = event.params.tickLower
+  collectSettled.tickUpper = event.params.tickUpper
+  collectSettled.logIndex = event.logIndex
+
+  // Aggregate date
+  updateMuffinDayData(event)
+  updatePoolDayData(pool, event)
+  updatePoolHourData(pool, event)
+  updateTierDayData(tier, event)
+  updateTierHourData(tier, event)
+  updateTokenDayData(token0, event)
+  updateTokenDayData(token1, event)
+  updateTokenHourData(token0, event)
+  updateTokenHourData(token1, event)
+
+  // Save
+  token0.save()
+  token1.save()
+  tier.save()
+  pool.save()
+  hub.save()
+  collectSettled.save()
+
+  // Position related
+  handleDecreaseLiquidity(changetype<BurnEvent>(event))
 
   if (event.params.amount0.gt(ZERO_BI) || event.params.feeAmount0.gt(ZERO_BI)) {
     updateAndSaveTokenBalance(token0, event.params.owner, event.params.ownerAccRefId)
@@ -947,4 +1124,20 @@ export function handleWithdraw(event: Withdraw): void {
   let amount = convertTokenToDecimal(event.params.amount, token.decimals)
   record.balance = record.balance.minus(amount)
   record.save()
+}
+
+export function handleSetLimitOrderType(event: SetLimitOrderType): void {
+  // let tierId = getTierId(event.params.poolId.toHexString(), event.params.tierId)
+  // let endTick: Tick | null = null
+  // if (event.params.limitOrderType === ZERO_FOR_ONE) {
+  //   endTick = Tick.load(getTickIdWithTierEntityId(tierId, event.params.tickLower))!
+  //   endTick.limitOrderSpacingZeroForOne = event.params.tickUpper - event.params.tickLower
+  // } else if (event.params.limitOrderType === ONE_FOR_ZERO) {
+  //   endTick = Tick.load(getTickIdWithTierEntityId(tierId, event.params.tickUpper))!
+  //   endTick.limitOrderSpacingOneForZero = event.params.tickUpper - event.params.tickLower
+  // }
+  // if (endTick !== null) {
+  //   endTick.save()
+  // }
+  handleManagerSetLimitOrderType(event)
 }

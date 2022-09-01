@@ -220,7 +220,7 @@ export function updateTokenDayData(token: Token, event: ethereum.Event): TokenDa
 
   tokenDayData.close = tokenPrice
   tokenDayData.priceUSD = token.derivedETH.times(bundle.ethPriceUSD)
-  tokenDayData.totalValueLocked = token.totalValueLocked
+  tokenDayData.amountLocked = token.amountLocked
   tokenDayData.totalValueLockedUSD = token.totalValueLockedUSD
   tokenDayData.save()
 
@@ -260,7 +260,7 @@ export function updateTokenHourData(token: Token, event: ethereum.Event): TokenH
 
   tokenHourData.close = tokenPrice
   tokenHourData.priceUSD = tokenPrice
-  tokenHourData.totalValueLocked = token.totalValueLocked
+  tokenHourData.amountLocked = token.amountLocked
   tokenHourData.totalValueLockedUSD = token.totalValueLockedUSD
   tokenHourData.save()
 
@@ -277,14 +277,15 @@ export function updateTickDayData(tick: Tick, event: ethereum.Event): TickDayDat
     tickDayData = new TickDayData(tickDayDataID)
     tickDayData.date = dayStartTimestamp
     tickDayData.pool = tick.pool
+    tickDayData.tier = tick.tier
     tickDayData.tick = tick.id
   }
   tickDayData.liquidityGross = tick.liquidityGross
   tickDayData.liquidityNet = tick.liquidityNet
-  tickDayData.volumeToken0 = tick.volumeToken0
-  tickDayData.volumeToken1 = tick.volumeToken0
-  tickDayData.volumeUSD = tick.volumeUSD
-  tickDayData.feesUSD = tick.feesUSD
+  // tickDayData.volumeToken0 = tick.volumeToken0
+  // tickDayData.volumeToken1 = tick.volumeToken1
+  // tickDayData.volumeUSD = tick.volumeUSD
+  // tickDayData.feesUSD = tick.feesUSD
   tickDayData.feeGrowthOutside0X64 = tick.feeGrowthOutside0X64
   tickDayData.feeGrowthOutside1X64 = tick.feeGrowthOutside1X64
 

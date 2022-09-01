@@ -56,7 +56,7 @@ type Token @entity {
   # number of pools containing this token
   poolCount: BigInt!
   # liquidity across all pools in token units
-  totalValueLocked: BigDecimal!
+  amountLocked: BigDecimal!
   # liquidity across all pools in derived USD
   totalValueLockedUSD: BigDecimal!
   # derived price in ETH
@@ -117,9 +117,9 @@ type Pool @entity {
   # all time fees collected derived USD
   collectedFeesUSD: BigDecimal!
   # total token 0 across all ticks
-  totalValueLockedToken0: BigDecimal!
+  amount0: BigDecimal!
   # total token 1 across all ticks
-  totalValueLockedToken1: BigDecimal!
+  amount1: BigDecimal!
   # tvl derived ETH
   totalValueLockedETH: BigDecimal!
   # tvl USD
@@ -136,6 +136,7 @@ type Pool @entity {
   mints: [Mint!]! @derivedFrom(field: "pool")
   burns: [Burn!]! @derivedFrom(field: "pool")
   swaps: [Swap!]! @derivedFrom(field: "pool")
+  collectSettleds: [CollectSettled!]! @derivedFrom(field: "pool")
   # collects: [Collect!]! @derivedFrom(field: "pool")
   ticks: [Tick!]! @derivedFrom(field: "pool")
   tiers: [Tier!]! @derivedFrom(field: "pool")
@@ -159,9 +160,9 @@ type Tier @entity {
   # token1
   token1: Token!
   # fee amount
-  feeTier: BigInt!
+  feeTier: Int!
   # Sqrt gamma, integer of 1/100000
-  sqrtGamma: BigInt!
+  sqrtGamma: Int!
   # in range liquidity
   liquidity: BigInt!
   # current price tracker
@@ -175,11 +176,11 @@ type Tier @entity {
   # token1 per token0
   token1Price: BigDecimal!
   # current tick
-  tick: BigInt
+  tick: Int!
   # next tick above
-  nextTickAbove: BigInt
+  nextTickAbove: Int!
   # next tick below
-  nextTickBelow: BigInt
+  nextTickBelow: Int!
   # tick Spacing multiplier for limit order
   limitOrderTickSpacingMultiplier: Int!
   # # current observation index
@@ -203,9 +204,9 @@ type Tier @entity {
   # all time fees collected derived USD
   collectedFeesUSD: BigDecimal!
   # total token 0 across all ticks
-  totalValueLockedToken0: BigDecimal!
+  amount0: BigDecimal!
   # total token 1 across all ticks
-  totalValueLockedToken1: BigDecimal!
+  amount1: BigDecimal!
   # tvl derived ETH
   totalValueLockedETH: BigDecimal!
   # tvl USD
@@ -221,6 +222,7 @@ type Tier @entity {
   # derived fields
   mints: [Mint!]! @derivedFrom(field: "tier")
   burns: [Burn!]! @derivedFrom(field: "tier")
+  collectSettleds: [CollectSettled!]! @derivedFrom(field: "tier")
   swapTierData: [SwapTierData!]! @derivedFrom(field: "tier")
   # collects: [Collect!]! @derivedFrom(field: "tier")
   ticks: [Tick!]! @derivedFrom(field: "tier")
@@ -247,22 +249,22 @@ type Tick @entity {
   price0: BigDecimal!
   # calculated price of token1 of tick within this pool - constant
   price1: BigDecimal!
-  # lifetime volume of token0 with this tick in range
-  volumeToken0: BigDecimal!
-  # lifetime volume of token1 with this tick in range
-  volumeToken1: BigDecimal!
-  # lifetime volume in derived USD with this tick in range
-  volumeUSD: BigDecimal!
-  # lifetime volume in untracked USD with this tick in range
-  untrackedVolumeUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
-  # all time collected fees in token0
-  collectedFeesToken0: BigDecimal!
-  # all time collected fees in token1
-  collectedFeesToken1: BigDecimal!
-  # all time collected fees in USD
-  collectedFeesUSD: BigDecimal!
+  # # lifetime volume of token0 with this tick in range
+  # volumeToken0: BigDecimal!
+  # # lifetime volume of token1 with this tick in range
+  # volumeToken1: BigDecimal!
+  # # lifetime volume in derived USD with this tick in range
+  # volumeUSD: BigDecimal!
+  # # lifetime volume in untracked USD with this tick in range
+  # untrackedVolumeUSD: BigDecimal!
+  # # fees in USD
+  # feesUSD: BigDecimal!
+  # # all time collected fees in token0
+  # collectedFeesToken0: BigDecimal!
+  # # all time collected fees in token1
+  # collectedFeesToken1: BigDecimal!
+  # # all time collected fees in USD
+  # collectedFeesUSD: BigDecimal!
   # created time
   createdAtTimestamp: BigInt!
   # created block
@@ -274,6 +276,12 @@ type Tick @entity {
   # vars needed for fee computation
   feeGrowthOutside0X64: BigInt!
   feeGrowthOutside1X64: BigInt!
+  # # vars needed for liquidity update of settlement
+  # limitOrderSpacingZeroForOne: Int!
+  # limitOrderSpacingOneForZero: Int!
+  # next ticks
+  nextTickIdxAbove: Int!
+  nextTickIdxBelow: Int!
 }
 
 type AccountTokenBalance @entity {
@@ -348,7 +356,7 @@ type Position @entity {
   feeGrowthInside1LastX64: BigInt!
 }
 
-type PositionSnapshot @entity {
+type PositionSnapshot @entity(immutable: true) {
   # <NFT token id>#<block number>
   id: ID!
   # NFT token id for sorting
@@ -390,7 +398,7 @@ type PositionSnapshot @entity {
   feeGrowthInside1LastX64: BigInt!
 }
 
-type Transaction @entity {
+type Transaction @entity(immutable: true) {
   # txn hash
   id: ID!
   # block txn was included in
@@ -405,11 +413,12 @@ type Transaction @entity {
   burns: [Burn!]! @derivedFrom(field: "transaction")
   swaps: [Swap!]! @derivedFrom(field: "transaction")
   swapTierData: [SwapTierData!]! @derivedFrom(field: "transaction")
+  collectSettleds: [CollectSettled!]! @derivedFrom(field: "transaction")
   # flashed: [Flash!]! @derivedFrom(field: "transaction")
   # collects: [Collect!]! @derivedFrom(field: "transaction")
 }
 
-type Mint @entity {
+type Mint @entity(immutable: true) {
   # transaction hash + "#" + index in mints Transaction array
   id: ID!
   # which txn the mint was included in
@@ -443,16 +452,16 @@ type Mint @entity {
   # derived amount based on available prices of tokens
   amountUSD: BigDecimal
   # lower tick of the position
-  tickLower: BigInt!
+  tickLower: Int!
   # upper tick of the position
-  tickUpper: BigInt!
+  tickUpper: Int!
   # amount of liquidity minted divided by 2^8
   liquidityD8: BigInt!
   # order within the txn
   logIndex: BigInt
 }
 
-type Burn @entity {
+type Burn @entity(immutable: true) {
   # transaction hash + "#" + index in mints Transaction array
   id: ID!
   # txn burn was included in
@@ -486,9 +495,9 @@ type Burn @entity {
   # derived amount based on available prices of tokens
   amountUSD: BigDecimal
   # lower tick of position
-  tickLower: BigInt!
+  tickLower: Int!
   # upper tick of position
-  tickUpper: BigInt!
+  tickUpper: Int!
   # amount of token0 fee collected
   feeAmount0: BigDecimal!
   # amount of token1 fee collected
@@ -497,7 +506,52 @@ type Burn @entity {
   logIndex: BigInt
 }
 
-type Swap @entity {
+type CollectSettled @entity(immutable: true) {
+  # transaction hash + "#" + index in pool txn count
+  id: ID!
+  # txn burn was included in
+  transaction: Transaction!
+  # pool position is within
+  pool: Pool!
+  # tier position is within
+  tier: Tier!
+  # allow indexing by tokens
+  token0: Token!
+  # allow indexing by tokens
+  token1: Token!
+  # need this to pull recent txns for specific token or pool
+  timestamp: BigInt!
+  # owner of position where liquidity was burned
+  owner: Bytes
+  # the owner account ref id of owner
+  ownerAccRefId: BigInt
+  # position from owner where liquidity was burned
+  positionRefId: BigInt
+  # txn origin
+  origin: Bytes! # the EOA that initiated the txn
+  # amouny of liquidity burned
+  amount: BigInt!
+  # amount of liquidity burned divided by 2^8
+  liquidityD8: BigInt!
+  # amount of token 0 burned
+  amount0: BigDecimal!
+  # amount of token 1 burned
+  amount1: BigDecimal!
+  # derived amount based on available prices of tokens
+  amountUSD: BigDecimal
+  # lower tick of position
+  tickLower: Int!
+  # upper tick of position
+  tickUpper: Int!
+  # amount of token0 fee collected
+  feeAmount0: BigDecimal!
+  # amount of token1 fee collected
+  feeAmount1: BigDecimal!
+  # position within the transactions
+  logIndex: BigInt
+}
+
+type Swap @entity(immutable: true) {
   # transaction hash + "#" + index in swaps Transaction array
   id: ID!
   # pointer to transaction
@@ -534,7 +588,7 @@ type Swap @entity {
   tierData: [SwapTierData!]! @derivedFrom(field: "swap")
 }
 
-type SwapTierData @entity {
+type SwapTierData @entity(immutable: true) {
   # transaction hash + "#" + index in swaps Transaction array + "#" + tier index
   id: ID!
   # pointer to transaction
@@ -574,66 +628,10 @@ type SwapTierData @entity {
   # The sqrt(price) of the pool after the swap, as a UQ56.72
   sqrtPriceX72: BigInt!
   # the tick after the swap
-  tick: BigInt!
+  tick: Int!
   # index within the txn
   logIndex: BigInt
 }
-
-# type Collect @entity {
-#   # transaction hash + "#" + index in collect Transaction array
-#   id: ID!
-#   # pointer to txn
-#   transaction: Transaction!
-#   # timestamp of event
-#   timestamp: BigInt!
-#   # pool collect occured within
-#   pool: Pool!
-#   # tier collect occured within
-#   tier: Tier!
-#   # owner of position collect was performed on
-#   owner: Bytes
-#   # amount of token0 collected
-#   amount0: BigDecimal!
-#   # amount of token1 collected
-#   amount1: BigDecimal!
-#   # derived amount based on available prices of tokens
-#   amountUSD: BigDecimal
-#   # lower tick of position
-#   tickLower: BigInt!
-#   # uppper tick of position
-#   tickUpper: BigInt!
-#   # index within the txn
-#   logIndex: BigInt
-# }
-
-# type Flash @entity {
-#   # transaction hash + "-" + index in collect Transaction array
-#   id: ID!
-#   # pointer to txn
-#   transaction: Transaction!
-#   # timestamp of event
-#   timestamp: BigInt!
-#   # pool collect occured within
-#   pool: Pool!
-#   # tier the position is within
-#   tier: Tier!
-#   # sender of the flash
-#   sender: Bytes!
-#   # recipient of the flash
-#   recipient: Bytes!
-#   # amount of token0 flashed
-#   amount0: BigDecimal!
-#   # amount of token1 flashed
-#   amount1: BigDecimal!
-#   # derived amount based on available prices of tokens
-#   amountUSD: BigDecimal!
-#   # amount token0 paid for flash
-#   amount0Paid: BigDecimal!
-#   # amount token1 paid for flash
-#   amount1Paid: BigDecimal!
-#   # index within the txn
-#   logIndex: BigInt
-# }
 
 # Data accumulated and condensed into day stats for all of Muffin
 type MuffinDayData @entity {
@@ -758,7 +756,7 @@ type TierDayData @entity {
   # price of token1 - derived from sqrtPrice
   token1Price: BigDecimal!
   # current tick at end of period
-  tick: BigInt
+  tick: Int
   # tracker for global fee growth
   feeGrowthGlobal0X64: BigInt!
   # tracker for global fee growth
@@ -804,7 +802,7 @@ type TierHourData @entity {
   # price of token1 - derived from sqrtPrice
   token1Price: BigDecimal!
   # current tick at end of period
-  tick: BigInt
+  tick: Int
   # tracker for global fee growth
   feeGrowthGlobal0X64: BigInt!
   # tracker for global fee growth
@@ -846,14 +844,14 @@ type TickHourData @entity {
   liquidityGross: BigInt!
   # how much liquidity changes when tick crossed at end of period
   liquidityNet: BigInt!
-  # hourly volume of token0 with this tick in range
-  volumeToken0: BigDecimal!
-  # hourly volume of token1 with this tick in range
-  volumeToken1: BigDecimal!
-  # hourly volume in derived USD with this tick in range
-  volumeUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
+  # # hourly volume of token0 with this tick in range
+  # volumeToken0: BigDecimal!
+  # # hourly volume of token1 with this tick in range
+  # volumeToken1: BigDecimal!
+  # # hourly volume in derived USD with this tick in range
+  # volumeUSD: BigDecimal!
+  # # fees in USD
+  # feesUSD: BigDecimal!
 }
 
 # Data accumulated and condensed into day stats for each exchange
@@ -873,14 +871,14 @@ type TickDayData @entity {
   liquidityGross: BigInt!
   # how much liquidity changes when tick crossed at end of period
   liquidityNet: BigInt!
-  # hourly volume of token0 with this tick in range
-  volumeToken0: BigDecimal!
-  # hourly volume of token1 with this tick in range
-  volumeToken1: BigDecimal!
-  # hourly volume in derived USD with this tick in range
-  volumeUSD: BigDecimal!
-  # fees in USD
-  feesUSD: BigDecimal!
+  # # hourly volume of token0 with this tick in range
+  # volumeToken0: BigDecimal!
+  # # hourly volume of token1 with this tick in range
+  # volumeToken1: BigDecimal!
+  # # hourly volume in derived USD with this tick in range
+  # volumeUSD: BigDecimal!
+  # # fees in USD
+  # feesUSD: BigDecimal!
   # vars needed for fee computation
   feeGrowthOutside0X64: BigInt!
   feeGrowthOutside1X64: BigInt!
@@ -900,7 +898,7 @@ type TokenDayData @entity {
   # volume in USD even on pools with less reliable USD values
   untrackedVolumeUSD: BigDecimal!
   # liquidity across all pools in token units
-  totalValueLocked: BigDecimal!
+  amountLocked: BigDecimal!
   # liquidity across all pools in derived USD
   totalValueLockedUSD: BigDecimal!
   # price at end of period in USD
@@ -931,7 +929,7 @@ type TokenHourData @entity {
   # volume in USD even on pools with less reliable USD values
   untrackedVolumeUSD: BigDecimal!
   # liquidity across all pools in token units
-  totalValueLocked: BigDecimal!
+  amountLocked: BigDecimal!
   # liquidity across all pools in derived USD
   totalValueLockedUSD: BigDecimal!
   # price at end of period in USD

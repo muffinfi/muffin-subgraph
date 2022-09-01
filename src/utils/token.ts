@@ -27,7 +27,7 @@ export function getOrCreateToken(tokenAddress: Address): Token | null {
     token.volumeUSD = ZERO_BD
     token.feesUSD = ZERO_BD
     token.untrackedVolumeUSD = ZERO_BD
-    token.totalValueLocked = ZERO_BD
+    token.amountLocked = ZERO_BD
     token.totalValueLockedUSD = ZERO_BD
     token.txCount = ZERO_BI
     token.poolCount = ZERO_BI
