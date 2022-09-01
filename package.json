@@ -11,7 +11,7 @@
     "deploy:mainnet": "yarn prepare:mainnet && graph deploy --node https://api.thegraph.com/deploy/ muffinfi/muffin-mainnet",
     "prepare:rinkeby": "js-yaml config/rinkeby.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/rinkeby.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:rinkeby": "yarn prepare:rinkeby && yarn build",
-    "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ virtues-milkier/muffin-rinkeby",
+    "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ dkenw/muffin-rinkeby",
     "prepare:hardhat": "js-yaml config/hardhat.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/hardhat.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:hardhat": "yarn prepare:hardhat && yarn build",
     "create:hardhat": "graph create --node http://localhost:8020/ dkenw/muffin-rinkeby",
