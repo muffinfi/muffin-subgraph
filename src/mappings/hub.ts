@@ -193,8 +193,8 @@ export function handleUpdateTier(event: UpdateTier): void {
     minTick = createTick(minTickId, MIN_TICK_IDX, pool.id, tier.tierId, event)
     minTick.liquidityNet = BASE_LIQUIDITY
     minTick.liquidityGross = BASE_LIQUIDITY
-    // minTick.nextTickIdxBelow = MIN_TICK_IDX
-    // minTick.nextTickIdxAbove = MAX_TICK_IDX
+    minTick.nextTickIdxBelow = MIN_TICK_IDX
+    minTick.nextTickIdxAbove = MAX_TICK_IDX
     minTick.save()
   }
 
