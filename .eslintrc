@@ -9,6 +9,16 @@
   ],
   "rules": {
     "prefer-const": "off",
-    "@typescript-eslint/no-non-null-assertion": "off"
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/ban-types": [
+      "error",
+      {
+        "types": {
+          // un-ban a type that's banned by default
+          "BigInt": false
+        },
+        "extendDefaults": true
+      }
+    ]
   }
 }
