@@ -12,6 +12,9 @@
     "prepare:rinkeby": "js-yaml config/rinkeby.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/rinkeby.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:rinkeby": "yarn prepare:rinkeby && yarn build",
     "deploy:rinkeby": "yarn prepare:rinkeby && graph deploy --node https://api.thegraph.com/deploy/ dkenw/muffin-rinkeby",
+    "prepare:goerli": "js-yaml config/goerli.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/goerli.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
+    "build:goerli": "yarn prepare:goerli && yarn build",
+    "deploy:goerli": "yarn prepare:goerli && graph deploy --node https://api.thegraph.com/deploy/ dkenw/muffin-goerli",
     "prepare:hardhat": "js-yaml config/hardhat.yaml | mustache - subgraph.yaml.handlebars > subgraph.yaml && js-yaml config/hardhat.yaml | mustache - src/utils/constants.ts.handlebars > src/utils/constants.ts",
     "build:hardhat": "yarn prepare:hardhat && yarn build",
     "create:hardhat": "graph create --node http://localhost:8020/ dkenw/muffin-rinkeby",
@@ -24,7 +27,7 @@
   },
   "devDependencies": {
     "@graphprotocol/graph-cli": "^0.33.0",
-    "@muffinfi/muffin-contracts": "1.0.12",
+    "@muffinfi/muffin-contracts": "1.0.13-alpha.0",
     "@typescript-eslint/eslint-plugin": "^5.35.1",
     "@typescript-eslint/parser": "^5.35.1",
     "eslint": "^8.22.0",

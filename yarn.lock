@@ -278,10 +278,10 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
 
-"@muffinfi/muffin-contracts@1.0.12":
-  version "1.0.12"
-  resolved "https://registry.yarnpkg.com/@muffinfi/muffin-contracts/-/muffin-contracts-1.0.12.tgz#a05be869f75b98a865f6658735e4e91959a76043"
-  integrity sha512-jzxCtuJ7ZJ/mQZE5clnUsH9EsufTsZ8dIYrGIxlMqCco25c5pNfrI3oFFRZepFZjimf/SR6vIO29yDB2RFkgCw==
+"@muffinfi/muffin-contracts@1.0.13-alpha.0":
+  version "1.0.13-alpha.0"
+  resolved "https://registry.yarnpkg.com/@muffinfi/muffin-contracts/-/muffin-contracts-1.0.13-alpha.0.tgz#2c164e2af2ac05274e3c39a3dc8a9b5d78e7f9a9"
+  integrity sha512-xEfyMf9Y7z60aZBihA9lBjM02p2nBr1/jKxJlat/mbTqLWoi5S6CxWL5wGLvdUl8csvLS3tZPXMbzW/4Q1cyDw==
   dependencies:
     "@openzeppelin/contracts" "4.3.1"
 
@@ -1828,9 +1828,9 @@ globby@^11.1.0:
     merge2 "^1.4.1"
     slash "^3.0.0"
 
-"gluegun@git+https://github.com/edgeandnode/gluegun.git#v4.3.1-pin-colors-dep":
+"gluegun@https://github.com/edgeandnode/gluegun#v4.3.1-pin-colors-dep":
   version "4.3.1"
-  resolved "git+https://github.com/edgeandnode/gluegun.git#b34b9003d7bf556836da41b57ef36eb21570620a"
+  resolved "https://github.com/edgeandnode/gluegun#b34b9003d7bf556836da41b57ef36eb21570620a"
   dependencies:
     apisauce "^1.0.1"
     app-module-path "^2.2.0"

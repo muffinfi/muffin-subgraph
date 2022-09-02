@@ -55,7 +55,7 @@ dataSources:
           handler: handlePoolCreated
         - event: UpdatePool(indexed bytes32,uint8,uint8)
           handler: handleUpdatePool
-        - event: UpdateTier(indexed bytes32,indexed uint8,indexed uint24,uint8)
+        - event: UpdateTier(indexed bytes32,indexed uint8,indexed uint24,uint128,uint8)
           handler: handleUpdateTier
         - event: Mint(indexed bytes32,indexed address,indexed uint256,uint8,int24,int24,address,uint256,uint96,uint256,uint256)
           handler: handleMint
@@ -71,6 +71,8 @@ dataSources:
           handler: handleDeposit
         - event: Withdraw(indexed address,indexed uint256,indexed address,uint256,address)
           handler: handleWithdraw
+        # - event: Settle(indexed bytes32,indexed uint8,indexed int24,int24,uint96)
+        #   handler: handleSettle
   - kind: ethereum
     name: Manager
     network: {{network}}

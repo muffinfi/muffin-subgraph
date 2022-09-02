@@ -430,6 +430,43 @@
       },
       {
         "indexed": true,
+        "internalType": "uint8",
+        "name": "tierId",
+        "type": "uint8"
+      },
+      {
+        "indexed": true,
+        "internalType": "int24",
+        "name": "tickEnd",
+        "type": "int24"
+      },
+      {
+        "indexed": false,
+        "internalType": "int24",
+        "name": "tickStart",
+        "type": "int24"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint96",
+        "name": "liquidityD8",
+        "type": "uint96"
+      }
+    ],
+    "name": "Settle",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "bytes32",
+        "name": "poolId",
+        "type": "bytes32"
+      },
+      {
+        "indexed": true,
         "internalType": "address",
         "name": "sender",
         "type": "address"
@@ -550,6 +587,12 @@
         "internalType": "uint24",
         "name": "sqrtGamma",
         "type": "uint24"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint128",
+        "name": "sqrtPrice",
+        "type": "uint128"
       },
       {
         "indexed": false,

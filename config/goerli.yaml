@@ -1,0 +1,17 @@
+network: goerli
+address: '0xA06c455D19704E4871c547211504e17E2199308D'
+startBlock: 7514815
+managerAddress: '0x95186358C4F2f64AE33264494E4A7c6Cd5Dd80dd'
+managerStartBlock: 7514815
+
+MAX_TIERS: 6
+
+# below addresses must be lowercased for simpler comparison
+USDC_ADDRESS: '0xb6136c36610d4d5374030ac0ec0021fb1f04aaaa'
+WETH_ADDRESS: '0xb4fbf271143f4fbf7b91a5ded31805e42b2208d6'
+WHITELIST_TOKENS:
+  - '0x2c03ff2a384b5cbb93998be296ade0ed2d9e60f9' # TETH (custom)
+  - '0x2bfede717809561176086760ee3f4a4895a399af' # WBTC (custom)
+  - '0x63435cf71274ed12d9bfbc18440a4975764f74fd' # DAI  (custom)
+STABLE_COINS:
+  - '0x63435cf71274ed12d9bfbc18440a4975764f74fd' # DAI  (custom)
