@@ -1,8 +1,8 @@
 network: mainnet
 address: '0x6690384822afF0B65fE0C21a809F187F5c3fcdd8'
-startBlock: 15459724
+startBlock: 15432100
 managerAddress: '0xded07E2da859714F69d93f9794344606Ed67907E'
-managerStartBlock: 15459724
+managerStartBlock: 15432100
 
 MAX_TIERS: 6
 

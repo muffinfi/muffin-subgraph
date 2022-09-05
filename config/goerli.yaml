@@ -1,8 +1,8 @@
 network: goerli
 address: '0xA06c455D19704E4871c547211504e17E2199308D'
-startBlock: 7514815
+startBlock: 7474747 # 7514815
 managerAddress: '0x95186358C4F2f64AE33264494E4A7c6Cd5Dd80dd'
-managerStartBlock: 7514815
+managerStartBlock: 7474747 # 7514815
 
 MAX_TIERS: 6
 
