@@ -1,15 +1,15 @@
 import { Address, BigInt, ByteArray, Bytes, crypto, ethereum } from '@graphprotocol/graph-ts'
-import { convertTokenToDecimal } from '.'
 import { AccountTokenBalance, Token } from '../types/schema'
-import { hubContract, ZERO_BD, ZERO_BI } from './constants'
+import { hubContract, ZERO_BD, ZERO_BI } from '../utils/constants'
+import { convertTokenToDecimal } from '../utils/misc'
 
 export function getAccountHash(owner: Address, accRefId: BigInt): string | null {
   if (accRefId.equals(ZERO_BI)) {
     return null
   }
-  let data = [ethereum.Value.fromAddress(owner), ethereum.Value.fromUnsignedBigInt(accRefId)]
-  let tuple = changetype<ethereum.Tuple>(data)
-  let bytes = ethereum.encode(ethereum.Value.fromTuple(tuple))!
+  const data = [ethereum.Value.fromAddress(owner), ethereum.Value.fromUnsignedBigInt(accRefId)]
+  const tuple = changetype<ethereum.Tuple>(data)
+  const bytes = ethereum.encode(ethereum.Value.fromTuple(tuple))!
   return crypto.keccak256(bytes).toHexString()
 }
 
@@ -18,12 +18,12 @@ export function getAccountTokenBalance(
   accRefId: BigInt,
   tokenAddress: Address
 ): AccountTokenBalance | null {
-  let accountHash = getAccountHash(owner, accRefId)
+  const accountHash = getAccountHash(owner, accRefId)
   if (accountHash === null) {
     return null
   }
 
-  let id = tokenAddress.toHexString() + '#' + accountHash
+  const id = tokenAddress.toHexString() + '#' + accountHash
   let balance = AccountTokenBalance.load(id)
   if (balance === null) {
     balance = new AccountTokenBalance(id)
@@ -38,7 +38,7 @@ export function getAccountTokenBalance(
 }
 
 export function refreshTokenBalance(tokenBalance: AccountTokenBalance, decimals: BigInt): void {
-  let amount = hubContract.accounts(
+  const amount = hubContract.accounts(
     Address.fromString(tokenBalance.tokenAddress),
     Bytes.fromByteArray(ByteArray.fromHexString(tokenBalance.accountHash))
   )
@@ -46,10 +46,8 @@ export function refreshTokenBalance(tokenBalance: AccountTokenBalance, decimals:
 }
 
 export function updateAndSaveTokenBalance(token: Token, owner: Address, accRefId: BigInt): void {
-  let record = getAccountTokenBalance(owner, accRefId, Address.fromString(token.id))
-  if (record === null) {
-    return
-  }
+  const record = getAccountTokenBalance(owner, accRefId, Address.fromString(token.id))
+  if (record === null) return
   refreshTokenBalance(record, token.decimals)
   record.save()
 }

@@ -6,26 +6,24 @@ import {
   Pool,
   PoolDayData,
   PoolHourData,
-  Tick,
-  TickDayData,
   Tier,
   TierDayData,
   TierHourData,
   Token,
   TokenDayData,
   TokenHourData,
-} from './../types/schema'
-import { HUB_ADDRESS, ONE_BI, ZERO_BD, ZERO_BI } from './constants'
+} from '../types/schema'
+import { HUB_ADDRESS, ONE_BI, ZERO_BD, ZERO_BI } from '../utils/constants'
 
 /**
  * Tracks global aggregate data over daily windows
  * @param event
  */
 export function updateMuffinDayData(event: ethereum.Event): MuffinDayData {
-  let muffin = Hub.load(HUB_ADDRESS)!
-  let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp / 86400 // rounded
-  let dayStartTimestamp = dayID * 86400
+  const muffin = Hub.load(HUB_ADDRESS)!
+  const timestamp = event.block.timestamp.toI32()
+  const dayID = timestamp / 86400 // rounded
+  const dayStartTimestamp = dayID * 86400
   let muffinDayData = MuffinDayData.load(dayID.toString())
   if (muffinDayData === null) {
     muffinDayData = new MuffinDayData(dayID.toString())
@@ -42,10 +40,10 @@ export function updateMuffinDayData(event: ethereum.Event): MuffinDayData {
 }
 
 export function updatePoolDayData(pool: Pool, event: ethereum.Event): PoolDayData {
-  let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp / 86400
-  let dayStartTimestamp = dayID * 86400
-  let dayPoolID = pool.id.concat('-').concat(dayID.toString())
+  const timestamp = event.block.timestamp.toI32()
+  const dayID = timestamp / 86400
+  const dayStartTimestamp = dayID * 86400
+  const dayPoolID = pool.id.concat('-').concat(dayID.toString())
   let poolDayData = PoolDayData.load(dayPoolID)
   if (poolDayData === null) {
     poolDayData = new PoolDayData(dayPoolID)
@@ -68,10 +66,10 @@ export function updatePoolDayData(pool: Pool, event: ethereum.Event): PoolDayDat
 }
 
 export function updatePoolHourData(pool: Pool, event: ethereum.Event): PoolHourData {
-  let timestamp = event.block.timestamp.toI32()
-  let hourIndex = timestamp / 3600 // get unique hour within unix history
-  let hourStartUnix = hourIndex * 3600 // want the rounded effect
-  let hourPoolID = pool.id.concat('-').concat(hourIndex.toString())
+  const timestamp = event.block.timestamp.toI32()
+  const hourIndex = timestamp / 3600 // get unique hour within unix history
+  const hourStartUnix = hourIndex * 3600 // want the rounded effect
+  const hourPoolID = pool.id.concat('-').concat(hourIndex.toString())
   let poolHourData = PoolHourData.load(hourPoolID)
   if (poolHourData === null) {
     poolHourData = new PoolHourData(hourPoolID)
@@ -94,10 +92,10 @@ export function updatePoolHourData(pool: Pool, event: ethereum.Event): PoolHourD
 }
 
 export function updateTierDayData(tier: Tier, event: ethereum.Event): TierDayData {
-  let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp / 86400
-  let dayStartTimestamp = dayID * 86400
-  let dayTierID = tier.id.concat('-').concat(dayID.toString())
+  const timestamp = event.block.timestamp.toI32()
+  const dayID = timestamp / 86400
+  const dayStartTimestamp = dayID * 86400
+  const dayTierID = tier.id.concat('-').concat(dayID.toString())
   let tierDayData = TierDayData.load(dayTierID)
   if (tierDayData === null) {
     tierDayData = new TierDayData(dayTierID)
@@ -141,10 +139,10 @@ export function updateTierDayData(tier: Tier, event: ethereum.Event): TierDayDat
 }
 
 export function updateTierHourData(tier: Tier, event: ethereum.Event): TierHourData {
-  let timestamp = event.block.timestamp.toI32()
-  let hourIndex = timestamp / 3600 // get unique hour within unix history
-  let hourStartUnix = hourIndex * 3600 // want the rounded effect
-  let hourTierID = tier.id.concat('-').concat(hourIndex.toString())
+  const timestamp = event.block.timestamp.toI32()
+  const hourIndex = timestamp / 3600 // get unique hour within unix history
+  const hourStartUnix = hourIndex * 3600 // want the rounded effect
+  const hourTierID = tier.id.concat('-').concat(hourIndex.toString())
   let tierHourData = TierHourData.load(hourTierID)
   if (tierHourData === null) {
     tierHourData = new TierHourData(hourTierID)
@@ -188,12 +186,12 @@ export function updateTierHourData(tier: Tier, event: ethereum.Event): TierHourD
 }
 
 export function updateTokenDayData(token: Token, event: ethereum.Event): TokenDayData {
-  let bundle = Bundle.load('1')!
-  let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp / 86400
-  let dayStartTimestamp = dayID * 86400
-  let tokenDayID = token.id.toString().concat('-').concat(dayID.toString())
-  let tokenPrice = token.derivedETH.times(bundle.ethPriceUSD)
+  const bundle = Bundle.load('1')!
+  const timestamp = event.block.timestamp.toI32()
+  const dayID = timestamp / 86400
+  const dayStartTimestamp = dayID * 86400
+  const tokenDayID = token.id.toString().concat('-').concat(dayID.toString())
+  const tokenPrice = token.derivedETH.times(bundle.ethPriceUSD)
 
   let tokenDayData = TokenDayData.load(tokenDayID)
   if (tokenDayData === null) {
@@ -228,14 +226,14 @@ export function updateTokenDayData(token: Token, event: ethereum.Event): TokenDa
 }
 
 export function updateTokenHourData(token: Token, event: ethereum.Event): TokenHourData {
-  let bundle = Bundle.load('1')!
-  let timestamp = event.block.timestamp.toI32()
-  let hourIndex = timestamp / 3600 // get unique hour within unix history
-  let hourStartUnix = hourIndex * 3600 // want the rounded effect
-  let tokenHourID = token.id.toString().concat('-').concat(hourIndex.toString())
-  let tokenHourData = TokenHourData.load(tokenHourID)
-  let tokenPrice = token.derivedETH.times(bundle.ethPriceUSD)
+  const bundle = Bundle.load('1')!
+  const timestamp = event.block.timestamp.toI32()
+  const hourIndex = timestamp / 3600 // get unique hour within unix history
+  const hourStartUnix = hourIndex * 3600 // want the rounded effect
+  const tokenHourID = token.id.toString().concat('-').concat(hourIndex.toString())
+  const tokenPrice = token.derivedETH.times(bundle.ethPriceUSD)
 
+  let tokenHourData = TokenHourData.load(tokenHourID)
   if (tokenHourData === null) {
     tokenHourData = new TokenHourData(tokenHourID)
     tokenHourData.periodStartUnix = hourStartUnix
@@ -265,31 +263,4 @@ export function updateTokenHourData(token: Token, event: ethereum.Event): TokenH
   tokenHourData.save()
 
   return tokenHourData
-}
-
-export function updateTickDayData(tick: Tick, event: ethereum.Event): TickDayData {
-  let timestamp = event.block.timestamp.toI32()
-  let dayID = timestamp / 86400
-  let dayStartTimestamp = dayID * 86400
-  let tickDayDataID = tick.id.concat('-').concat(dayID.toString())
-  let tickDayData = TickDayData.load(tickDayDataID)
-  if (tickDayData === null) {
-    tickDayData = new TickDayData(tickDayDataID)
-    tickDayData.date = dayStartTimestamp
-    tickDayData.pool = tick.pool
-    tickDayData.tier = tick.tier
-    tickDayData.tick = tick.id
-  }
-  tickDayData.liquidityGross = tick.liquidityGross
-  tickDayData.liquidityNet = tick.liquidityNet
-  // tickDayData.volumeToken0 = tick.volumeToken0
-  // tickDayData.volumeToken1 = tick.volumeToken1
-  // tickDayData.volumeUSD = tick.volumeUSD
-  // tickDayData.feesUSD = tick.feesUSD
-  tickDayData.feeGrowthOutside0X64 = tick.feeGrowthOutside0X64
-  tickDayData.feeGrowthOutside1X64 = tick.feeGrowthOutside1X64
-
-  tickDayData.save()
-
-  return tickDayData
 }
