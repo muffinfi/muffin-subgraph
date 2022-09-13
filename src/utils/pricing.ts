@@ -13,7 +13,8 @@ import {
 } from './constants'
 import { getPoolId, getTierId } from './id'
 
-const MINIMUM_ETH_LOCKED = BigDecimal.fromString('52')
+// TODO: find the right amount later
+const MINIMUM_ETH_LOCKED = BigDecimal.fromString('1')
 
 const PRICE_DENOM = ONE_BI.leftShift(144).toBigDecimal()
 export function sqrtPriceX72ToTokenPrices(sqrtPriceX72: BigInt, token0: Token, token1: Token): BigDecimal[] {
