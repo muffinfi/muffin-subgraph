@@ -1,5 +1,5 @@
 # Muffin Subgraph
 
-## ⚠️ This subgraph is not ready for public use.
+### ⚠️ This subgraph is currently in alpha version
 
-This repo is under active development and contain known bugs that are pending to resolve. A newer vesion of Muffin subgraph is on the roadmap. Please wait for that. Thanks.
+This repo is currently under active development and the schema could possibly change in the future.
