@@ -1,9 +1,11 @@
-import { BigInt, ByteArray } from '@graphprotocol/graph-ts'
+import { BigInt } from '@graphprotocol/graph-ts'
 import { ONE_BI, ZERO_BI } from './constants'
 
 const Q56 = ONE_BI.leftShift(56)
 const Q128 = ONE_BI.leftShift(128)
-const MAX_UINT256 = ONE_BI.leftShift(255).times(BigInt.fromI32(2)).minus(ONE_BI)
+export const MAX_UINT256 = BigInt.fromString(
+  '115792089237316195423570985008687907853269984665640564039457584007913129639935'
+)
 
 export const MIN_TICK_IDX = -776363
 export const MAX_TICK_IDX = 776363
@@ -11,82 +13,61 @@ export const MAX_TICK_IDX = 776363
 export const MIN_SQRT_PRICE = BigInt.fromString('65539')
 export const MAX_SQRT_PRICE = BigInt.fromString('340271175397327323250730767849398346765')
 
-let POWERS_OF_2: BigInt[][] = []
-
-export function getPowersOf2(): BigInt[][] {
-  if (POWERS_OF_2.length === 0) {
-    POWERS_OF_2 = [
-      [BigInt.fromI32(128), Q128],
-      [BigInt.fromI32(64), ONE_BI.leftShift(64)],
-      [BigInt.fromI32(32), ONE_BI.leftShift(32)],
-      [BigInt.fromI32(16), ONE_BI.leftShift(16)],
-      [BigInt.fromI32(8), ONE_BI.leftShift(8)],
-      [BigInt.fromI32(4), ONE_BI.leftShift(4)],
-      [BigInt.fromI32(2), ONE_BI.leftShift(2)],
-      [BigInt.fromI32(1), ONE_BI.leftShift(1)],
-    ]
-  }
-  return POWERS_OF_2
+export function ceilDiv(x: BigInt, y: BigInt): BigInt {
+  return x.div(y).plus(x.mod(y).isZero() ? ONE_BI : ZERO_BI)
 }
 
-export function mostSignificantBit(x: BigInt): number {
-  let msb = 0
-  let powersOf2 = getPowersOf2()
-  for (let i = 0; i < powersOf2.length; i++) {
-    const powers = powersOf2[i]
-    const power = powers[0].toI32()
-    if (x.ge(powers[1])) {
-      x = x.rightShift(power)
-      msb += power
+export function mostSignificantBit(x: BigInt): i32 {
+  let msb: i32 = 0
+  for (let n: u8 = 128; n >= 1; n >>= 1) {
+    if (x.ge(ONE_BI.leftShift(n))) {
+      x = x.rightShift(n)
+      msb += n
     }
   }
   return msb
 }
 
-function mulShift(val: BigInt, mulBy: string): BigInt {
-  return val.times(BigInt.fromByteArray(ByteArray.fromHexString(mulBy))).rightShift(128)
+function mulShift(val: BigInt, mulBy: string, shiftBy: u8): BigInt {
+  return val.times(BigInt.fromString(mulBy)).rightShift(shiftBy)
 }
 
 export function tickToSqrtPriceX72(tick: i32): BigInt {
-  assert(tick >= MIN_TICK_IDX && tick <= MAX_TICK_IDX, 'Invalid tick: ' + tick.toString())
   const x = abs(tick)
 
-  let ratio = Q128
-  if ((x & 0x1) !== 0) ratio = mulShift(ratio, '0xfffcb933bd6fad37aa2d162d1a594001')
-  if ((x & 0x2) !== 0) ratio = mulShift(ratio, '0xfff97272373d413259a46990580e213a')
-  if ((x & 0x4) !== 0) ratio = mulShift(ratio, '0xfff2e50f5f656932ef12357cf3c7fdcc')
-  if ((x & 0x8) !== 0) ratio = mulShift(ratio, '0xffe5caca7e10e4e61c3624eaa0941cd0')
-  if ((x & 0x10) !== 0) ratio = mulShift(ratio, '0xffcb9843d60f6159c9db58835c926644')
-  if ((x & 0x20) !== 0) ratio = mulShift(ratio, '0xff973b41fa98c081472e6896dfb254c0')
-  if ((x & 0x40) !== 0) ratio = mulShift(ratio, '0xff2ea16466c96a3843ec78b326b52861')
-  if ((x & 0x80) !== 0) ratio = mulShift(ratio, '0xfe5dee046a99a2a811c461f1969c3053')
-  if ((x & 0x100) !== 0) ratio = mulShift(ratio, '0xfcbe86c7900a88aedcffc83b479aa3a4')
-  if ((x & 0x200) !== 0) ratio = mulShift(ratio, '0xf987a7253ac413176f2b074cf7815e54')
-  if ((x & 0x400) !== 0) ratio = mulShift(ratio, '0xf3392b0822b70005940c7a398e4b70f3')
-  if ((x & 0x800) !== 0) ratio = mulShift(ratio, '0xe7159475a2c29b7443b29c7fa6e889d9')
-  if ((x & 0x1000) !== 0) ratio = mulShift(ratio, '0xd097f3bdfd2022b8845ad8f792aa5825')
-  if ((x & 0x2000) !== 0) ratio = mulShift(ratio, '0xa9f746462d870fdf8a65dc1f90e061e5')
-  if ((x & 0x4000) !== 0) ratio = mulShift(ratio, '0x70d869a156d2a1b890bb3df62baf32f7')
-  if ((x & 0x8000) !== 0) ratio = mulShift(ratio, '0x31be135f97d08fd981231505542fcfa6')
-  if ((x & 0x10000) !== 0) ratio = mulShift(ratio, '0x09aa508b5b7a84e1c677de54f3e99bc9')
-  if ((x & 0x20000) !== 0) ratio = mulShift(ratio, '0x5d6af8dedb81196699c329225ee604')
-  if ((x & 0x40000) !== 0) ratio = mulShift(ratio, '0x2216e584f5fa1ea926041bedfe98')
-  if ((x & 0x80000) !== 0) ratio = mulShift(ratio, '0x048a170391f7dc42444e8fa2')
+  let ratio = BigInt.fromString('340282366920938463463374607431768211456')
+  if ((x & 0x1) != 0) ratio = mulShift(ratio, '340265354078544963557816517032075149313', 128)
+  if ((x & 0x2) != 0) ratio = mulShift(ratio, '340248342086729790484326174814286782778', 128)
+  if ((x & 0x4) != 0) ratio = mulShift(ratio, '340214320654664324051920982716015181260', 128)
+  if ((x & 0x8) != 0) ratio = mulShift(ratio, '340146287995602323631171512101879684304', 128)
+  if ((x & 0x10) != 0) ratio = mulShift(ratio, '340010263488231146823593991679159461444', 128)
+  if ((x & 0x20) != 0) ratio = mulShift(ratio, '339738377640345403697157401104375502016', 128)
+  if ((x & 0x40) != 0) ratio = mulShift(ratio, '339195258003219555707034227454543997025', 128)
+  if ((x & 0x80) != 0) ratio = mulShift(ratio, '338111622100601834656805679988414885971', 128)
+  if ((x & 0x100) != 0) ratio = mulShift(ratio, '335954724994790223023589805789778977700', 128)
+  if ((x & 0x200) != 0) ratio = mulShift(ratio, '331682121138379247127172139078559817300', 128)
+  if ((x & 0x400) != 0) ratio = mulShift(ratio, '323299236684853023288211250268160618739', 128)
+  if ((x & 0x800) != 0) ratio = mulShift(ratio, '307163716377032989948697243942600083929', 128)
+  if ((x & 0x1000) != 0) ratio = mulShift(ratio, '277268403626896220162999269216087595045', 128)
+  if ((x & 0x2000) != 0) ratio = mulShift(ratio, '225923453940442621947126027127485391333', 128)
+  if ((x & 0x4000) != 0) ratio = mulShift(ratio, '149997214084966997727330242082538205943', 128)
+  if ((x & 0x8000) != 0) ratio = mulShift(ratio, '66119101136024775622716233608466517926', 128)
+  if ((x & 0x10000) != 0) ratio = mulShift(ratio, '12847376061809297530290974190478138313', 128)
+  if ((x & 0x20000) != 0) ratio = mulShift(ratio, '485053260817066172746253684029974020', 128)
+  if ((x & 0x40000) != 0) ratio = mulShift(ratio, '691415978906521570653435304214168', 128)
+  if ((x & 0x80000) != 0) ratio = mulShift(ratio, '1404880482679654955896180642', 128)
 
   if (tick >= 0) ratio = MAX_UINT256.div(ratio)
-
-  return ratio.mod(Q56).gt(ZERO_BI) ? ratio.rightShift(56).plus(ONE_BI) : ratio.rightShift(56)
+  return ratio.rightShift(56).plus(ratio.mod(Q56).gt(ZERO_BI) ? ONE_BI : ZERO_BI)
 }
 
 export function sqrtPriceX72ToTick(sqrtPriceX72: BigInt): i32 {
-  assert(sqrtPriceX72.ge(MIN_SQRT_PRICE), 'sqrtPriceX72 too low: ' + sqrtPriceX72.toString())
-  assert(sqrtPriceX72.le(MAX_SQRT_PRICE), 'sqrtPriceX72 too high: ' + sqrtPriceX72.toString())
-
   const msb = mostSignificantBit(sqrtPriceX72)
-  let log2 = BigInt.fromI32(msb).minus(BigInt.fromI32(72)).leftShift(64)
-  let z = sqrtPriceX72.leftShift(127 - msb)
 
-  for (let i = 0; i < 18; i++) {
+  let log2 = BigInt.fromI32(msb - 72).leftShift(64)
+  let z = sqrtPriceX72.leftShift((127 - msb) as u8)
+
+  for (let i: u8 = 0; i < 18; i++) {
     z = z.times(z).rightShift(127)
     if (z.ge(Q128)) {
       z = z.rightShift(1)
@@ -95,12 +76,8 @@ export function sqrtPriceX72ToTick(sqrtPriceX72: BigInt): i32 {
   }
 
   const logBaseSqrt10001 = log2.times(BigInt.fromString('255738958999603826347141'))
-  const tickHigh = logBaseSqrt10001
-    .plus(BigInt.fromString('17996007701288367970265332090599899137'))
-    .rightShift(128)
-    .toI32()
-
-  const tickLow = logBaseSqrt10001
+  const _tickUpper = logBaseSqrt10001.plus(BigInt.fromString('17996007701288367970265332090599899137')).rightShift(128)
+  const _tickLower = logBaseSqrt10001
     .minus(
       logBaseSqrt10001.lt(BigInt.fromString('-230154402537746701963478439606373042805014528'))
         ? BigInt.fromString('98577143636729737466164032634120830977')
@@ -109,7 +86,8 @@ export function sqrtPriceX72ToTick(sqrtPriceX72: BigInt): i32 {
         : ZERO_BI
     )
     .rightShift(128)
-    .toI32()
 
-  return tickLow === tickHigh || sqrtPriceX72.ge(tickToSqrtPriceX72(tickHigh)) ? tickHigh : tickLow
+  const tickUpper = _tickUpper.toI32()
+  const tickLower = _tickLower.toI32()
+  return tickLower == tickUpper || sqrtPriceX72.ge(tickToSqrtPriceX72(tickUpper)) ? tickUpper : tickLower
 }

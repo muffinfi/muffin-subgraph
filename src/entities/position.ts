@@ -1,25 +1,23 @@
 import { Address, BigInt, ethereum } from '@graphprotocol/graph-ts'
 import { Manager } from '../types/Manager/Manager'
 import { Position, PositionSnapshot } from '../types/schema'
-import { loadTransaction } from '../utils'
 import { ADDRESS_ZERO, MANAGER_ADDRESS, ZERO_BD, ZERO_BI } from '../utils/constants'
-import { getPoolId } from '../utils/pool'
-import { getTickId } from '../utils/tick'
-import { getTierId } from './tier'
+import { getPoolId, getTickId, getTierId } from '../utils/id'
+import { loadTransaction } from './transaction'
 
 export function getPosition(event: ethereum.Event, tokenId: BigInt): Position | null {
   let position = Position.load(tokenId.toString())
   if (position === null) {
-    let contract = Manager.bind(Address.fromString(MANAGER_ADDRESS))
-    let positionCall = contract.try_getPosition(tokenId)
+    const contract = Manager.bind(Address.fromString(MANAGER_ADDRESS))
+    const positionCall = contract.try_getPosition(tokenId)
 
     // the following call reverts in situations where the position is minted
     // and deleted in the same block - from my investigation this happens
     // in calls from  BancorSwap
     // (e.g. 0xf7867fa19aa65298fadb8d4f72d0daed5e836f3ba01f0b9b9631cdc6c36bed40)
     if (!positionCall.reverted) {
-      let positionResult = positionCall.value
-      let poolId = getPoolId(positionResult.value1, positionResult.value2)
+      const positionResult = positionCall.value
+      const poolId = getPoolId(positionResult.value1, positionResult.value2)
 
       position = new Position(tokenId.toString())
       position.tokenId = tokenId
@@ -56,8 +54,8 @@ export function getPosition(event: ethereum.Event, tokenId: BigInt): Position | 
 }
 
 export function updateFeeVars(position: Position, event: ethereum.Event, tokenId: BigInt): Position {
-  let positionManagerContract = Manager.bind(event.address)
-  let positionResult = positionManagerContract.try_getPosition(tokenId)
+  const positionManagerContract = Manager.bind(event.address)
+  const positionResult = positionManagerContract.try_getPosition(tokenId)
   if (!positionResult.reverted) {
     position.feeGrowthInside0LastX64 = positionResult.value.value6.feeGrowthInside0Last
     position.feeGrowthInside1LastX64 = positionResult.value.value6.feeGrowthInside1Last
@@ -67,7 +65,7 @@ export function updateFeeVars(position: Position, event: ethereum.Event, tokenId
 }
 
 export function savePositionSnapshot(position: Position, event: ethereum.Event): void {
-  let positionSnapshot = new PositionSnapshot(position.id.concat('#').concat(event.block.number.toString()))
+  const positionSnapshot = new PositionSnapshot(position.id.concat('#').concat(event.block.number.toString()))
   positionSnapshot.owner = position.owner
   positionSnapshot.tokenId = position.tokenId
   positionSnapshot.pool = position.pool
