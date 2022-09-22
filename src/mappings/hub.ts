@@ -34,6 +34,7 @@ import { Bundle, Burn, CollectSettled, Hub, Mint, Pool, Swap, SwapTierData, Tier
 import {
   hubContract,
   HUB_ADDRESS,
+  ONE_BD,
   ONE_BI,
   ONE_FOR_ZERO,
   WHITELIST_TOKENS,
@@ -544,13 +545,17 @@ export function handleSwap(event: SwapEvent): void {
   let feesETH = ZERO_BD
   let feesUSD = ZERO_BD
   let liquidity = ZERO_BI
+  let amount0ExcludeFee = ZERO_BD
+  let amount1ExcludeFee = ZERO_BD
   const tiers: Tier[] = []
   const tickControllers: TickController[] = []
   const tierFeesUSDs: BigDecimal[] = []
 
+  let zeroToOne = true
   let amount0Distribution = event.params.amountInDistribution
   let amount1Distribution = event.params.amountOutDistribution
   if (amount0.lt(ZERO_BD) || amount1.gt(ZERO_BD)) {
+    zeroToOne = false
     amount0Distribution = event.params.amountOutDistribution
     amount1Distribution = event.params.amountInDistribution
   }
@@ -564,6 +569,13 @@ export function handleSwap(event: SwapEvent): void {
     const tier = Tier.load(getTierId(pool.id, i))!
     const tickController = new TickController(pool.id, tier.tierId, event.block)
     const tierData = event.params.tierData[i]
+
+    const feeFactor = BigInt.fromI32(tier.feeTier).toBigDecimal().div(BigInt.fromI32(100000).toBigDecimal())
+    const amountFactor = ONE_BD.minus(feeFactor)
+    const amount0InTvl = amount0.times(amount0Percent).times(zeroToOne ? amountFactor : ONE_BD)
+    const amount1InTvl = amount1.times(amount1Percent).times(zeroToOne ? ONE_BD : amountFactor)
+    amount0ExcludeFee = amount0ExcludeFee.plus(amount0InTvl)
+    amount1ExcludeFee = amount1ExcludeFee.plus(amount1InTvl)
 
     if (tierData.isZero()) {
       tierFeesUSDs.push(BigDecimal.zero())
@@ -590,14 +602,8 @@ export function handleSwap(event: SwapEvent): void {
       if (!priceGoesDown && newTickIdx == MAX_TICK_IDX) newTickIdx -= 1
 
       // imprecise estimation of fees value in eth or usd
-      const tierFeesETH = amountTotalETHTracked
-        .times(amountInPercent)
-        .times(BigInt.fromI32(tier.feeTier).toBigDecimal())
-        .div(BigDecimal.fromString('100000'))
-      const tierFeesUSD = amountTotalUSDTracked
-        .times(amountInPercent)
-        .times(BigInt.fromI32(tier.feeTier).toBigDecimal())
-        .div(BigDecimal.fromString('100000'))
+      const tierFeesETH = amountTotalETHTracked.times(amountInPercent).times(feeFactor)
+      const tierFeesUSD = amountTotalUSDTracked.times(amountInPercent).times(feeFactor)
 
       // tier volume
       tier.volumeToken0 = tier.volumeToken0.plus(amount0Abs.times(amount0Percent))
@@ -635,8 +641,8 @@ export function handleSwap(event: SwapEvent): void {
       tier.liquidity = newLiquidity
       tier.sqrtPrice = newSqrtPrice
       tier.tick = newTickIdx
-      tier.amount0 = tier.amount0.plus(amount0.times(amount0Percent))
-      tier.amount1 = tier.amount1.plus(amount1.times(amount1Percent))
+      tier.amount0 = tier.amount0.plus(amount0InTvl)
+      tier.amount1 = tier.amount1.plus(amount1InTvl)
 
       // updated pool tier ratess
       const prices = sqrtPriceX72ToTokenPrices(newSqrtPrice, token0, token1)
@@ -662,7 +668,7 @@ export function handleSwap(event: SwapEvent): void {
 
   // update token0 data
   token0.volume = token0.volume.plus(amount0Abs)
-  token0.amountLocked = token0.amountLocked.plus(amount0)
+  token0.amountLocked = token0.amountLocked.plus(amount0ExcludeFee)
   token0.volumeUSD = token0.volumeUSD.plus(amountTotalUSDTracked)
   token0.untrackedVolumeUSD = token0.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
   token0.feesUSD = token0.feesUSD.plus(feesUSD)
@@ -670,7 +676,7 @@ export function handleSwap(event: SwapEvent): void {
 
   // update token1 data
   token1.volume = token1.volume.plus(amount1Abs)
-  token1.amountLocked = token1.amountLocked.plus(amount1)
+  token1.amountLocked = token1.amountLocked.plus(amount1ExcludeFee)
   token1.volumeUSD = token1.volumeUSD.plus(amountTotalUSDTracked)
   token1.untrackedVolumeUSD = token1.untrackedVolumeUSD.plus(amountTotalUSDUntracked)
   token1.feesUSD = token1.feesUSD.plus(feesUSD)
@@ -689,8 +695,8 @@ export function handleSwap(event: SwapEvent): void {
 
   // Update the pool with the new active liquidity, price, and tick.
   pool.liquidity = liquidity
-  pool.amount0 = pool.amount0.plus(amount0)
-  pool.amount1 = pool.amount1.plus(amount1)
+  pool.amount0 = pool.amount0.plus(amount0ExcludeFee)
+  pool.amount1 = pool.amount1.plus(amount1ExcludeFee)
 
   // updated pool and tier
   pool.save()
