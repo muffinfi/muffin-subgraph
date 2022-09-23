@@ -560,6 +560,7 @@ export function handleSwap(event: SwapEvent): void {
     amount1Distribution = event.params.amountInDistribution
   }
 
+  const gammaBase = BigInt.fromI64(100_000 ** 2).toBigDecimal()
   // Loop each tier
   for (let i = 0; i < event.params.tierData.length; i++) {
     const amountInPercent = extractAmountDistributionAtIndex(event.params.amountInDistribution, i)
@@ -570,10 +571,10 @@ export function handleSwap(event: SwapEvent): void {
     const tickController = new TickController(pool.id, tier.tierId, event.block)
     const tierData = event.params.tierData[i]
 
-    const feeFactor = BigInt.fromI32(tier.feeTier).toBigDecimal().div(BigInt.fromI32(100000).toBigDecimal())
-    const amountFactor = ONE_BD.minus(feeFactor)
-    const amount0InTvl = amount0.times(amount0Percent).times(zeroToOne ? amountFactor : ONE_BD)
-    const amount1InTvl = amount1.times(amount1Percent).times(zeroToOne ? ONE_BD : amountFactor)
+    const gamma = BigInt.fromI64((tier.sqrtGamma as i64) ** 2).divDecimal(gammaBase)
+    const feeFactor = ONE_BD.minus(gamma)
+    const amount0InTvl = amount0.times(amount0Percent).times(zeroToOne ? gamma : ONE_BD)
+    const amount1InTvl = amount1.times(amount1Percent).times(zeroToOne ? ONE_BD : gamma)
     amount0ExcludeFee = amount0ExcludeFee.plus(amount0InTvl)
     amount1ExcludeFee = amount1ExcludeFee.plus(amount1InTvl)
 
